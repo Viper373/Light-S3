@@ -28,7 +28,7 @@ collection = db["pornhub"]
 # 配置CORS - 允许前端访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http:127.0.0.1:8888"],  # 在生产环境中，应该限制为您的前端域名
+    allow_origins=["*"],  # 在生产环境中，应该限制为您的前端域名
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
