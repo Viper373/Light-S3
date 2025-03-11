@@ -1,0 +1,28 @@
+{
+  "name": "s3videos",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev docs  --port 3000",
+    "build": "vitepress build docs",
+    "serve": "vitepress serve docs"
+  },
+  "devDependencies": {
+    "@escook/vitepress-theme": "latest",
+    "@types/animejs": "^3.1.13",
+    "animejs": "^3.2.2",
+    "canvas-confetti": "^1.9.3",
+    "vitepress": "latest",
+    "vue": "latest"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "@algolia/client-search"
+      ]
+    }
+  },
+  "dependencies": {
+    "busuanzi.pure.js": "^1.0.3"
+  }
+}

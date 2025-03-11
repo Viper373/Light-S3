@@ -1,2 +1,5 @@
 .env.local
-/S3Videos/docs/.vitepress/cache/
+.idea
+docs/.vitepress/cache/
+node_modules/
+.package-lock.json
