@@ -13,7 +13,7 @@ load_dotenv()
 app = FastAPI()
 
 # 从环境变量获取MongoDB连接字符串
-mongodb_uri = os.getenv("MONGODB_URI", "mongodb+srv://Viper3:ShadowZed666@pythonproject.1rxku.mongodb.net/?retryWrites=true&w=majority&appName=PythonProject")
+mongodb_uri = os.getenv("MONGODB_URI")
 
 # 使用连接池并设置超时
 client = MongoClient(
@@ -28,7 +28,7 @@ collection = db["pornhub"]
 # 配置CORS - 允许前端访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 在生产环境中，应该限制为您的前端域名
+    allow_origins=["http:127.0.0.1:8888"],  # 在生产环境中，应该限制为您的前端域名
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,11 +37,12 @@ app.add_middleware(
 # 预加载数据到内存
 video_metadata = {}
 
+
 @app.on_event("startup")
 async def startup_event():
     # 初始化缓存
     FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
-    
+
     # 预加载所有元数据到内存
     try:
         pipeline = [
@@ -51,11 +52,11 @@ async def startup_event():
                 "author": "$作者名称",
                 "video_title": "$作者视频列表.视频标题",
                 "video_views": "$作者视频列表.视频观看次数",
-                "duration": "$作者视频列表.视频时长" 
+                "duration": "$作者视频列表.视频时长"
             }}
         ]
         data = list(collection.aggregate(pipeline))
-        
+
         # 构建查找索引
         for item in data:
             author = item.get("author", "")
@@ -87,7 +88,7 @@ async def get_videos(author: str = Query(None)):
                             "duration": value.get("duration")
                         })
             return {"status": "success", "data": filtered_data}
-        
+
         # 否则返回所有数据的转换版本
         all_data = []
         for key, value in video_metadata.items():
@@ -103,12 +104,15 @@ async def get_videos(author: str = Query(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # 添加健康检查端点
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
+
 if __name__ == "__main__":
     import uvicorn
+
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
