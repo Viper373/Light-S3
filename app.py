@@ -2,16 +2,22 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 import os
-# 修改导入语句，使用正确的包名
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.decorator import cache
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 app = FastAPI()
 
+# 从环境变量获取MongoDB连接字符串
+mongodb_uri = os.getenv("MONGODB_URI", "mongodb+srv://Viper3:ShadowZed666@pythonproject.1rxku.mongodb.net/?retryWrites=true&w=majority&appName=PythonProject")
+
 # 使用连接池并设置超时
 client = MongoClient(
-    "mongodb+srv://Viper3:ShadowZed666@pythonproject.1rxku.mongodb.net/?retryWrites=true&w=majority&appName=PythonProject",
+    mongodb_uri,
     maxPoolSize=10,
     serverSelectionTimeoutMS=5000,
     connectTimeoutMS=5000
@@ -19,14 +25,10 @@ client = MongoClient(
 db = client["XOVideos"]
 collection = db["pornhub"]
 
-# 初始化缓存，增加缓存时间到24小时
-# 注意：FastAPICache.init 需要在应用启动事件中调用
-# 所以我们将这行移到startup_event函数中
-
-# 配置CORS
+# 配置CORS - 允许前端访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # 在生产环境中，应该限制为您的前端域名
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -101,7 +103,12 @@ async def get_videos(author: str = Query(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# 添加健康检查端点
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

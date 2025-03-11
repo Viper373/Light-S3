@@ -5,7 +5,8 @@
   "scripts": {
     "serve": "vue-cli-service serve --port 8888",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "vercel-build": "vue-cli-service build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.750.0",
