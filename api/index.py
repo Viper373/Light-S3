@@ -22,8 +22,8 @@ client = MongoClient(
     serverSelectionTimeoutMS=5000,
     connectTimeoutMS=5000
 )
-db = client["XOVideos"]
-collection = db["pornhub"]
+db = client[os.getenv("DB_NAME")]
+collection = db[os.getenv("COL_NAME")]
 
 # 配置CORS - 允许前端访问
 app.add_middleware(
