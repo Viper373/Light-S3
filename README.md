@@ -50,13 +50,19 @@ S3Browser/
 
 项目使用以下环境变量进行配置：
 
-| 变量名                   | 描述       | 示例值                               |
-|-----------------------|----------|-----------------------------------|
-| VUE_APP_S3_ENDPOINT   | S3 服务端点  | https://s3.bitiful.net            |
-| VUE_APP_S3_REGION     | S3 区域    | cn-east-1                         |
-| VUE_APP_S3_ACCESS_KEY | S3 访问密钥  | CYVLn8lssikCoSjACGCpqiO3gOg       |
-| VUE_APP_S3_SECRET_KEY | S3 秘密密钥  | gEKcmCVe12aVnb5jZ10MfBh3GcYXKHMWQ |
-| VUE_APP_S3_BUCKET     | S3 存储桶名称 | viper3                            |
+| 变量名                      | 描述           | 示例值                               |
+|--------------------------|--------------|-----------------------------------|
+| VUE_APP_S3_ENDPOINT      | S3 服务端点      | https://s3.bitiful.net            |
+| VUE_APP_S3_REGION        | S3 区域        | cn-east-1                         |
+| VUE_APP_S3_ACCESS_KEY    | S3 访问密钥      | CYVLn8lssikCoSjACGCpqiO3gOg       |
+| VUE_APP_S3_SECRET_KEY    | S3 秘密密钥      | gEKcmCVe12aVnb5jZ10MfBh3GcYXKHMWQ |
+| VUE_APP_S3_BUCKET        | S3 存储桶名称     | viper3                            |
+| VUE_APP_S3_DOMAIN        | S3 初始访问域名    | viper3.s3.bitiful.net             |
+| VUE_APP_S3_CUSTOM_DOMAIN | S3自定义域名      | bitiful.viper3.top                |
+| IMG_CDN                  | 图床CDN        | https://cdn.jsdelivr.net/gh       |
+| GH_OWNER                 | Github用户名    | Viper373                          |
+| GH_REPO                  | 图床Github仓库名称 | picx-images-hosting               |
+| MONGODB_URI              | MongoDB URI  | mongodb://localhost:27017/        |
 
 ## 安装与运行 🚀
 
