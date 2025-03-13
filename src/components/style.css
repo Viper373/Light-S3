@@ -69,10 +69,11 @@ body {
         #f0abec, #f0d8ff, /* 淡紫色到白色 */
         #ff7e5f, #feb47b, /* 回到粉橙色 */
         #86a8e7, #91eae4, /* 回到蓝绿色 */
-        #f0abec, #f0abec, /* 回到紫色 */
+        #90d1f0, #5adf91, /* 回到紫色 */
         #f0abec, #f0d8ff /* 回到淡紫色到白色 */
     );
     background-size: 400% 400%;
+    background-clip: text;
     -webkit-background-clip: text; /* 将背景剪裁为文本形状 */
     animation: rainbow-shift 9s ease infinite alternate, bounce 1.5s infinite ease-in-out;
 }
