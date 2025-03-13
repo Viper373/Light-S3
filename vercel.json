@@ -5,9 +5,20 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": { "distDir": "dist" }
+    },
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "S3Videos/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "S3Videos/docs/.vitepress/dist" }
     }
   ],
   "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "src": "/docs/(.*)", "dest": "/S3Videos/docs/.vitepress/dist/$1" },
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
   ]
