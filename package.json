@@ -6,7 +6,7 @@
     "serve": "vue-cli-service serve --port 8888",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "vercel-build": "vue-cli-service build"
+    "vercel-build": "vue-cli-service build && cd S3Videos && npm install && npm run docs:build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.750.0",
