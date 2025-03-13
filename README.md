@@ -1,4 +1,4 @@
-# S3Browser 项目文档 📁
+# 🌈S3Browser·微光小溪
 
 ## 项目概述 🌟
 
@@ -13,6 +13,7 @@ S3Browser 是一个基于 Vue.js 的 S3 兼容存储服务浏览器，允许用�
 - 🔄 浏览历史记录（前进/后退导航）
 - 🍞 面包屑导航
 - 🔍 与 MongoDB 集成获取视频元数据
+- 🌓 支持日间/夜间模式切换
 
 ## 技术栈 🛠️
 
@@ -23,6 +24,7 @@ S3Browser 是一个基于 Vue.js 的 S3 兼容存储服务浏览器，允许用�
 - **数据库**: MongoDB
 - **样式**: CSS (自定义样式)
 - **图片懒加载**: Vue-Lazyload
+- **文档系统**: VitePress
 
 ## 项目结构 📂
 
@@ -34,6 +36,9 @@ S3Browser/
 ├── app.py                # FastAPI 后端服务
 ├── package.json          # NPM 包配置
 ├── vue.config.js         # Vue CLI 配置
+├── vercel.json           # Vercel 部署配置
+├── api/                  # Vercel Serverless Functions
+│   └── index.py          # FastAPI 后端入口点
 ├── public/               # 静态资源
 ├── src/                  # 源代码
 │   ├── App.vue           # 主应用组件
@@ -43,8 +48,9 @@ S3Browser/
 │   │   └── style.css     # S3浏览器样式
 │   ├── main.js           # 应用入口
 │   └── utils/            # 工具函数
-└── S3Videos/             # 视频相关文档
+└── S3Videos/             # VitePress 文档系统
 ```
+
 
 ## 环境变量 🔐
 
@@ -62,9 +68,26 @@ S3Browser/
 | IMG_CDN                  | 图床CDN        | https://cdn.jsdelivr.net/gh       |
 | GH_OWNER                 | Github用户名    | Viper373                          |
 | GH_REPO                  | 图床Github仓库名称 | picx-images-hosting               |
-| MONGODB_URI              | MongoDB URI  | mongodb://localhost:27017/        |
+| MONGODB_URI              | MongoDB连接URI | mongodb://localhost:27017/        |
+| DB_NAME                  | 数据库名称        | XOVideos                          |
+| COL_NAME                 | 集合名称         | pornhub                           |
 
-## 安装与运行 🚀
+## Vercel部署 🚀
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Viper373/S3Browser)
+
+点击上方的"Deploy with Vercel"按钮，可以一键将项目部署到Vercel平台。
+部署后，您可以通过以下路径访问不同的服务：
+
+- **前端应用**: `https://your-vercel-domain.vercel.app/`
+- **API文档**: `https://your-vercel-domain.vercel.app/api/docs`
+- **VitePress文档**: `https://your-vercel-domain.vercel.app/docs/`
+在Vercel部署时，需要配置以下环境变量：
+
+1. 在Vercel项目设置中，找到"Environment Variables"部分
+2. 添加所有必要的环境变量（参考上面的环境变量表）
+3. 确保敏感信息（如S3密钥和MongoDB URI）已正确设置
+
+## 私有部署 🚀
 
 ### 前端
 
@@ -77,9 +100,6 @@ npm run serve
 
 # 构建生产版本
 npm run build
-
-# 代码检查
-npm run lint
 ```
 
 ### 后端
@@ -88,31 +108,86 @@ npm run lint
 # 安装依赖
 pip install -r requirements.txt
 
-# 运行后端服务
+# 运行后端服务（端口 8000）
 uvicorn app:app
 ```
 
+### 本地开发环境部署
+
+#### 前端部署
+
+```bash
+# 克隆仓库
+git clone https://github.com/Viper373/S3Browser.git
+cd S3Browser
+
+# 创建并配置环境变量
+在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
+# 安装依赖并启动前端服务
+npm install
+npm run serve
+```
+
+#### 后端部署
+
+```bash
+# 安装依赖
+pip install -r requirements.txt
+
+# 运行后端服务（端口 8000）
+uvicorn app:app --reload --port 8000
+
+```
+
+#### VitePress文档部署
+```bash
+# 进入VitePress目录
+cd S3Videos
+# 安装依赖
+npm install
+# 启动开发服务器
+npm run dev
+```
+
+#### 后端部署
+
+```bash
+# 克隆仓库
+git clone https://github.com/Viper373/S3Browser.git
+cd S3Browser
+# 创建并配置环境变量
+在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
+# 安装依赖并启动后端服务
+pip install -r requirements.txt
+uvicorn app:app --reload --port 8000
+```
+
+
 ## 后端 API 📡
 
-后端提供以下 API 端点：
-
-- **GET /xovideos**: 获取视频元数据
+- **GET /api/xovideos**: 获取视频元数据
   - 参数: `author` (可选) - 按作者筛选视频
   - 返回: 包含视频标题、观看次数和时长的 JSON 数据
-
-## 部署 🌐
-
-### 前端部署
-
-1. 创建生产环境变量文件 `.env.production`
-2. 运行 `npm run build` 生成生产版本
-3. 将 `dist` 目录部署到 Web 服务器
-
-### 后端部署
-
-1. 确保 MongoDB 连接配置正确
-2. 使用 Gunicorn 或其他 WSGI 服务器部署 FastAPI 应用
-3. 配置 CORS 以允许前端访问
+  ```json
+  {
+  "status": "success",
+  "data": [
+      {
+        "author": "作者名称",
+        "video_title": "视频标题",
+        "video_views": "观看次数",
+        "duration": "视频时长"
+      }
+    ]
+  }
+  ```
+- **GET /api/health**: 检查后端服务健康状态
+  - 返回: 包含状态信息的 JSON 数据
+  ```json
+  {
+    "status": "healthy"
+  }
+  ```
 
 ## 安全注意事项 🔒
 
@@ -120,6 +195,15 @@ uvicorn app:app
 - 在生产环境中使用环境变量或密钥管理服务存储敏感信息
 - 考虑使用 AWS IAM 角色而不是硬编码的访问密钥
 - 限制 CORS 配置，只允许必要的源
+
+## TODO ✈
+
+- 添加用户认证系统
+- 实现文件上传功能
+- 添加视频转码功能
+- 优化移动端体验
+- 添加更多自定义主题
+
 
 ## 贡献指南 👥
 
