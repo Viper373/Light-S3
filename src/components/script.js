@@ -193,7 +193,7 @@ export default {
                         const fileName = parts.pop() || '';
                         const name = fileName.replace(/\.[^.]+$/, ''); // 移除扩展名
                         const author = parts[parts.length - 1]; // 作者是最后一个目录名
-            
+                
                         return {
                             Key: file.Key,
                             IsDirectory: false,
@@ -219,9 +219,36 @@ export default {
                     const batch = authors.slice(i, i + 3);
                     await Promise.all(batch.map(async (author) => {
                         try {
-                            // 使用 fetchWithRetry 替代普通的 fetch
-                            const data = await fetchWithRetry(`/api/xovideos?author=${encodeURIComponent(author)}`);
-                            if (data.status === 'success') {
+                            // 修复：处理特殊字符和空格，确保URL编码正确
+                            const safeAuthor = encodeURIComponent(author.trim());
+                            
+                            // 添加错误处理和重试逻辑
+                            let retries = 2;
+                            let success = false;
+                            let data;
+                            
+                            while (retries >= 0 && !success) {
+                                try {
+                                    // 使用相对路径，避免跨域问题
+                                    const response = await fetch(`/api/xovideos?author=${safeAuthor}`);
+                                    
+                                    // 检查响应状态
+                                    if (!response.ok) {
+                                        console.warn(`获取作者 ${author} 的元数据失败: HTTP ${response.status}`);
+                                        throw new Error(`HTTP error! status: ${response.status}`);
+                                    }
+                                    
+                                    data = await response.json();
+                                    success = true;
+                                } catch (err) {
+                                    retries--;
+                                    if (retries < 0) throw err;
+                                    // 等待一段时间后重试
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                }
+                            }
+                            
+                            if (success && data.status === 'success') {
                                 data.data.forEach(item => {
                                     const key = `${item.author}/${item.video_title}`;
                                     metadata[key] = {
@@ -232,8 +259,14 @@ export default {
                             }
                         } catch (error) {
                             console.error(`获取作者 ${author} 的元数据失败:`, error);
+                            // 继续处理其他作者，不中断整个流程
                         }
                     }));
+                    
+                    // 添加小延迟，避免请求过于密集
+                    if (i + 3 < authors.length) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
                 }
             
                 // 匹配元数据到文件

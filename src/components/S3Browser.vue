@@ -96,14 +96,14 @@
                       <path fill="currentColor"
                             d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>
                     </svg>
-                    {{ formatDuration(file.duration) }}
+                    {{ file.duration }}
                   </span>
                   <span class="views" v-if="file.views !== undefined">
                     <svg class="meta-icon" viewBox="0 0 24 24" width="16" height="16">
                       <path fill="currentColor"
                             d="M12 5c4.063 0 7.526 2.62 8.972 6.205.4.97.4 2.091 0 3.09C19.526 18.38 16.063 21 12 21s-7.526-2.62-8.972-6.205a4.93 4.93 0 0 1 0-3.09C4.474 7.62 7.937 5 12 5zm0 2c-3.013 0-5.612 1.82-6.919 4.5a5.03 5.03 0 0 0 0 2.999C6.388 15.18 8.987 17 12 17s5.612-1.82 6.919-4.5a5.03 5.03 0 0 0 0-2.999C17.612 8.82 15.013 7 12 7zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm0 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
                     </svg>
-                    {{ formatViews(file.views) }}
+                    {{ file.views }}
                   </span>
                 </div>
               </div>
