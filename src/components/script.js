@@ -219,8 +219,8 @@ export default {
                     const batch = authors.slice(i, i + 3);
                     await Promise.all(batch.map(async (author) => {
                         try {
-                            const response = await fetchWithRetry(`/api/xovideos?author=${encodeURIComponent(author)}`);
-                            const data = await response.json();
+                            // 使用 fetchWithRetry 替代普通的 fetch
+                            const data = await fetchWithRetry(`/api/xovideos?author=${encodeURIComponent(author)}`);
                             if (data.status === 'success') {
                                 data.data.forEach(item => {
                                     const key = `${item.author}/${item.video_title}`;
@@ -255,83 +255,83 @@ export default {
                 this.loading = false;
             }
         },
-    },
 
-    // 添加数组分块方法
-    chunkArray(array, size) {
-        const result = [];
-        for (let i = 0; i < array.length; i += size) {
-            result.push(array.slice(i, i + size));
-        }
-        return result;
-    },
+        /** 数组分块方法 */
+        chunkArray(array, size) {
+            const result = [];
+            for (let i = 0; i < array.length; i += size) {
+                result.push(array.slice(i, i + size));
+            }
+            return result;
+        },
 
-    /** 加载初始数据 */
-    async loadInitialData() {
-        await this.loadFileList();
-    },
+        /** 加载初始数据 */
+        async loadInitialData() {
+            await this.loadFileList();
+        },
 
-    /** 更新浏览器 URL */
-    updateBrowserUrl() {
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('path', this.currentPath);
-        window.history.replaceState({}, '', newUrl.toString());
-    },
+        /** 更新浏览器 URL */
+        updateBrowserUrl() {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('path', this.currentPath);
+            window.history.replaceState({}, '', newUrl.toString());
+        },
 
-    /** 处理文件点击 */
-    handleFileClick(file) {
-        if (file.IsDirectory) {
-            const newPath = file.Key.replace(/\/?$/, '/');
-            this.updateHistory(newPath);
-            this.currentPath = newPath;
-        } else {
-            this.currentVideo = {
-                url: file.videoUrl,
-                title: file.name, // 使用预计算的 name
-                key: file.Key,
-            };
-            this.videoPlayerVisible = true;
-        }
-    },
+        /** 处理文件点击 */
+        handleFileClick(file) {
+            if (file.IsDirectory) {
+                const newPath = file.Key.replace(/\/?$/, '/');
+                this.updateHistory(newPath);
+                this.currentPath = newPath;
+            } else {
+                this.currentVideo = {
+                    url: file.videoUrl,
+                    title: file.name, // 使用预计算的 name
+                    key: file.Key,
+                };
+                this.videoPlayerVisible = true;
+            }
+        },
 
-    /** 关闭视频播放器 */
-    closeVideoPlayer() {
-        this.videoPlayerVisible = false;
-        this.currentVideo = null;
-    },
+        /** 关闭视频播放器 */
+        closeVideoPlayer() {
+            this.videoPlayerVisible = false;
+            this.currentVideo = null;
+        },
 
-    /** 格式化文件大小 */
-    formatSize(bytes) {
-        if (typeof bytes !== 'number') return '0 B';
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-        if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
-        return `${(bytes / 1073741824).toFixed(1)} GB`;
-    },
+        /** 格式化文件大小 */
+        formatSize(bytes) {
+            if (typeof bytes !== 'number') return '0 B';
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+            if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
+            return `${(bytes / 1073741824).toFixed(1)} GB`;
+        },
 
-    /** 格式化日期 */
-    formatDate(timestamp) {
-        try {
-            const date = new Date(timestamp);
-            return date.toLocaleString('zh-CN', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-            }).replace(/\//g, '-');
-        } catch (e) {
-            return 'N/A';
-        }
-    },
+        /** 格式化日期 */
+        formatDate(timestamp) {
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                }).replace(/\//g, '-');
+            } catch (e) {
+                return 'N/A';
+            }
+        },
 
-    /** 处理鼠标按钮事件 */
-    handleMouseButtons(event) {
-        if (event.button === 3) {
-            this.navigateBack();
-        } else if (event.button === 4) {
-            this.navigateForward();
-        }
-    },
+        /** 处理鼠标按钮事件 */
+        handleMouseButtons(event) {
+            if (event.button === 3) {
+                this.navigateBack();
+            } else if (event.button === 4) {
+                this.navigateForward();
+            }
+        },
+    }
 };
