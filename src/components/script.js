@@ -1,5 +1,33 @@
 import {S3Client, ListObjectsV2Command} from "@aws-sdk/client-s3";
 
+// 添加API请求缓存
+const apiCache = {};
+
+// 添加fetchWithRetry工具函数
+async function fetchWithRetry(url, options = {}, retries = 2, delay = 500) {
+    // 检查缓存
+    if (apiCache[url]) {
+        return apiCache[url];
+    }
+    
+    try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        // 缓存结果
+        apiCache[url] = data;
+        return data;
+    } catch (error) {
+        if (retries <= 0) {
+            throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(url, options, retries - 1, delay * 1.5);
+    }
+}
+
 export default {
     data() {
         return {
@@ -13,6 +41,8 @@ export default {
             directoryCache: {},
             videoPlayerVisible: false,
             currentVideo: null,
+            // 添加无效作者列表
+            invalidAuthors: ['XOVideos', 'videos', 'pornhub'],
         };
     },
 
@@ -135,7 +165,10 @@ export default {
                 this.files = this.directoryCache[this.currentPath];
                 return;
             }
+            
             this.loading = true;
+            this.error = null;
+            
             try {
                 // 获取 S3 文件列表
                 const command = new ListObjectsV2Command({
@@ -156,49 +189,53 @@ export default {
                 });
 
                 // 处理文件
-                const files = (s3Response.Contents || []).filter((file) => !file.Key.endsWith('/')).map((file) => {
-                    const parts = file.Key.split('/').filter((p) => p);
-                    const fileName = parts.pop() || '';
-                    const name = fileName.replace(/\.[^.]+$/, ''); // 移除扩展名
-                    const author = parts[parts.length - 1]; // 假设作者是最后一个目录名
+                const files = (s3Response.Contents || [])
+                    .filter((file) => !file.Key.endsWith('/'))
+                    .map((file) => {
+                        const parts = file.Key.split('/').filter((p) => p);
+                        const fileName = parts.pop() || '';
+                        const name = fileName.replace(/\.[^.]+$/, ''); // 移除扩展名
+                        const author = parts[parts.length - 1]; // 作者是最后一个目录名
 
-                    return {
-                        Key: file.Key,
-                        IsDirectory: false,
-                        name,
-                        author,
-                        Size: file.Size,
-                        LastModified: file.LastModified?.toISOString(),
-                        thumbnailUrl: `${process.env.IMG_CDN}/${process.env.GH_OWNER}/${process.env.GH_REPO}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`,
-                        videoUrl: `${process.env.VUE_APP_S3_ENDPOINT.replace(process.env.VUE_APP_S3_DOMAIN, process.env.VUE_APP_S3_CUSTOM_DOMAIN)}/${process.env.VUE_APP_S3_BUCKET}/${encodeURIComponent(file.Key)}`,
-                        views: null, // 初始化观看次数
-                        duration: null // 初始化时长
-                    };
-                });
+                        return {
+                            Key: file.Key,
+                            IsDirectory: false,
+                            name,
+                            author,
+                            Size: file.Size,
+                            LastModified: file.LastModified?.toISOString(),
+                            thumbnailUrl: `${process.env.IMG_CDN}/${process.env.GH_OWNER}/${process.env.GH_REPO}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`,
+                            videoUrl: `${process.env.VUE_APP_S3_ENDPOINT.replace(process.env.VUE_APP_S3_DOMAIN, process.env.VUE_APP_S3_CUSTOM_DOMAIN)}/${process.env.VUE_APP_S3_BUCKET}/${encodeURIComponent(file.Key)}`,
+                            views: null,
+                            duration: null
+                        };
+                    });
 
-                // 收集所有作者
-                const authors = [...new Set([...dirs.map(dir => dir.name), ...files.map(file => file.author)])];
+                // 收集有效作者
+                const validAuthors = [...new Set(files.map(file => file.author))]
+                    .filter(author => author && !this.invalidAuthors.includes(author));
 
-                // 获取视频元数据
+                // 批量获取视频元数据
                 const metadata = {};
-                for (const author of authors) {
-                    try {
-                        // 修改API调用地址，使用相对路径
-                        const response = await fetch(`/api/xovideos?author=${encodeURIComponent(author)}`);
-                        const data = await response.json();
-                        if (data.status === 'success') {
-                            data.data.forEach(item => {
-                                const key = `${item.author}/${item.video_title}`;
-                                metadata[key] = {
-                                    views: item.video_views,
-                                    duration: item.duration
-                                };
-                            });
+                const authorBatches = this.chunkArray(validAuthors, 3); // 每批最多3个作者
+                
+                for (const batch of authorBatches) {
+                    await Promise.all(batch.map(async (author) => {
+                        try {
+                            const data = await fetchWithRetry(`/api/xovideos?author=${encodeURIComponent(author)}`);
+                            if (data.status === 'success') {
+                                data.data.forEach(item => {
+                                    const key = `${item.author}/${item.video_title}`;
+                                    metadata[key] = {
+                                        views: item.video_views,
+                                        duration: item.duration
+                                    };
+                                });
+                            }
+                        } catch (error) {
+                            console.error(`获取作者 ${author} 的元数据失败:`, error);
                         }
-                    } catch (error) {
-                        console.error(`获取作者 ${author} 的元数据失败:`, error);
-                        // 继续处理其他作者，不中断整个流程
-                    }
+                    }));
                 }
 
                 // 匹配元数据到文件
@@ -214,12 +251,22 @@ export default {
                 this.directoryCache[this.currentPath] = [...dirs, ...files];
                 this.files = this.directoryCache[this.currentPath];
             } catch (error) {
+                console.error('加载文件列表失败:', error);
                 this.error = `加载失败: ${error.message}`;
             } finally {
                 this.loading = false;
             }
         },
-
+        
+        // 添加数组分块方法
+        chunkArray(array, size) {
+            const result = [];
+            for (let i = 0; i < array.length; i += size) {
+                result.push(array.slice(i, i + size));
+            }
+            return result;
+        },
+        
         /** 加载初始数据 */
         async loadInitialData() {
             await this.loadFileList();

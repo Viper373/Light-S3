@@ -71,9 +71,16 @@ async def startup_event():
 
 
 @app.get("/xovideos")
-@cache(expire=7200)  # 24小时缓存
+@cache(expire=7200)  # 2小时缓存
 async def get_videos(author: str = Query(None)):
     try:
+        # 记录请求信息
+        print(f"收到请求: author={author}")
+        
+        # 验证author参数
+        if author and (len(author) < 2 or author in ['XOVideos', 'videos', 'pornhub']):
+            return {"status": "success", "data": [], "message": "无效的作者参数"}
+            
         # 如果请求特定作者，则过滤数据
         if author:
             filtered_data = []
@@ -102,7 +109,9 @@ async def get_videos(author: str = Query(None)):
                 })
         return {"status": "success", "data": all_data}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        print(f"处理请求时出错: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 # 添加健康检查端点
