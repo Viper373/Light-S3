@@ -41,8 +41,6 @@ export default {
             directoryCache: {},
             videoPlayerVisible: false,
             currentVideo: null,
-            // 添加无效作者列表
-            invalidAuthors: ['XOVideos', 'videos', 'pornhub'],
         };
     },
 

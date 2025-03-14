@@ -8,17 +8,20 @@
     },
     {
       "src": "api/index.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "runtime": "python3.10.11"
+      }
     },
     {
-      "src": "S3Videos/package.json",
+      "src": "docs/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "S3Videos/docs/.vitepress/dist" }
+      "config": { "distDir": "docs/docs/.vitepress/dist" }
     }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.py" },
-    { "src": "/docs/(.*)", "dest": "/S3Videos/docs/.vitepress/dist/$1" },
+    { "src": "/docs/(.*)", "dest": "/docs/docs/.vitepress/dist/$1" },
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
   ]
