@@ -13,7 +13,7 @@ load_dotenv()
 app = FastAPI()
 
 # 从环境变量获取MongoDB连接字符串
-mongodb_uri = os.getenv("MONGODB_URI")
+mongodb_uri = os.getenv("VUE_APP_MONGODB_URI")
 
 # 使用连接池并设置超时
 client = MongoClient(
@@ -22,8 +22,8 @@ client = MongoClient(
     serverSelectionTimeoutMS=10000,
     connectTimeoutMS=5000
 )
-db = client[os.getenv("DB_NAME")]
-collection = db[os.getenv("COL_NAME")]
+db = client[os.getenv("VUE_APP_DB_NAME")]
+collection = db[os.getenv("VUE_APP_COL_NAME")]
 
 # 配置CORS - 允许前端访问
 app.add_middleware(
