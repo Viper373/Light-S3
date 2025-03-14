@@ -142,7 +142,7 @@ uvicorn app:app --reload --port 8000
 #### VitePress文档部署
 ```bash
 # 进入VitePress目录
-cd S3Videos
+cd docs
 # 安装依赖
 npm install
 # 启动开发服务器
