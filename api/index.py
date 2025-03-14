@@ -74,13 +74,6 @@ async def startup_event():
 @cache(expire=7200)  # 2小时缓存
 async def get_videos(author: str = Query(None)):
     try:
-        # 记录请求信息
-        print(f"收到请求: author={author}")
-        
-        # 验证author参数
-        if author and (len(author) < 2 or author in ['XOVideos', 'videos', 'pornhub']):
-            return {"status": "success", "data": [], "message": "无效的作者参数"}
-            
         # 如果请求特定作者，则过滤数据
         if author:
             filtered_data = []
