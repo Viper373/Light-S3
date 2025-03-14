@@ -169,7 +169,7 @@ export default {
                         author,
                         Size: file.Size,
                         LastModified: file.LastModified?.toISOString(),
-                        thumbnailUrl: `https://cdn.jsdelivr.net/gh/Viper373/picx-images-hosting/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`,
+                        thumbnailUrl: `${process.env.IMG_CDN}/${process.env.GH_OWNER}/${process.env.GH_REPO}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`,
                         videoUrl: `${process.env.VUE_APP_S3_ENDPOINT.replace(process.env.VUE_APP_S3_DOMAIN, process.env.VUE_APP_S3_CUSTOM_DOMAIN)}/${process.env.VUE_APP_S3_BUCKET}/${encodeURIComponent(file.Key)}`,
                         views: null, // 初始化观看次数
                         duration: null // 初始化时长
@@ -182,16 +182,22 @@ export default {
                 // 获取视频元数据
                 const metadata = {};
                 for (const author of authors) {
-                    const response = await fetch(`http://127.0.0.1:8000/xovideos?author=${encodeURIComponent(author)}`);
-                    const data = await response.json();
-                    if (data.status === 'success') {
-                        data.data.forEach(item => {
-                            const key = `${item.author}/${item.video_title}`;
-                            metadata[key] = {
-                                views: item.video_views,
-                                duration: item.duration
-                            };
-                        });
+                    try {
+                        // 修改API调用地址，使用相对路径
+                        const response = await fetch(`/api/xovideos?author=${encodeURIComponent(author)}`);
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            data.data.forEach(item => {
+                                const key = `${item.author}/${item.video_title}`;
+                                metadata[key] = {
+                                    views: item.video_views,
+                                    duration: item.duration
+                                };
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`获取作者 ${author} 的元数据失败:`, error);
+                        // 继续处理其他作者，不中断整个流程
                     }
                 }
 

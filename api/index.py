@@ -71,7 +71,7 @@ async def startup_event():
 
 
 @app.get("/xovideos")
-@cache(expire=86400)  # 24小时缓存
+@cache(expire=7200)  # 24小时缓存
 async def get_videos(author: str = Query(None)):
     try:
         # 如果请求特定作者，则过滤数据
