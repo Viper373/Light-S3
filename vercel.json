@@ -4,7 +4,12 @@
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
+      "config": {
+        "distDir": "dist",
+        "env": {
+          "NODE_VERSION": "18.20.0"
+        }
+      }
     },
     {
       "src": "api/index.py",
@@ -16,7 +21,12 @@
     {
       "src": "docs/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "docs/docs/.vitepress/dist" }
+      "config": {
+        "distDir": "docs/docs/.vitepress/dist",
+        "env": {
+          "NODE_VERSION": "18.20.0"
+        }
+      }
     }
   ],
   "routes": [
