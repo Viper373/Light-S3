@@ -19,7 +19,7 @@ mongodb_uri = os.getenv("MONGODB_URI")
 client = MongoClient(
     mongodb_uri,
     maxPoolSize=10,
-    serverSelectionTimeoutMS=5000,
+    serverSelectionTimeoutMS=10000,
     connectTimeoutMS=5000
 )
 db = client[os.getenv("DB_NAME")]
