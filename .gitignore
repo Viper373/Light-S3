@@ -4,3 +4,5 @@ docs/.vitepress/cache/
 node_modules/
 .package-lock.json
 /dist/
+/package-lock.json
+/docs/package-lock.json
