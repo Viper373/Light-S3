@@ -3,9 +3,11 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/static-build",
+      "use": "@vercel/node",
       "config": {
-        "distDir": "dist",
+        "scripts": {
+          "start": "npm run serve"
+        },
         "env": {
           "NODE_VERSION": "18.20.0"
         }
