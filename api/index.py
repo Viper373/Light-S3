@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
 from pymongo import MongoClient
 import os
 from fastapi_cache import FastAPICache
@@ -7,15 +8,10 @@ from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.decorator import cache
 from dotenv import load_dotenv
 
-# 加载环境变量
 load_dotenv()
-
 app = FastAPI()
 
-# 从环境变量获取MongoDB连接字符串
 mongodb_uri = os.getenv("VUE_APP_MONGODB_URI")
-
-# 使用连接池并设置超时
 client = MongoClient(
     mongodb_uri,
     maxPoolSize=10,
@@ -25,25 +21,20 @@ client = MongoClient(
 db = client[os.getenv("VUE_APP_DB_NAME")]
 collection = db[os.getenv("VUE_APP_COL_NAME")]
 
-# 配置CORS - 允许前端访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 在生产环境中，应该限制为您的前端域名
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 预加载数据到内存
 video_metadata = {}
 
 
 @app.on_event("startup")
 async def startup_event():
-    # 初始化缓存
     FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
-
-    # 预加载所有元数据到内存
     try:
         pipeline = [
             {"$unwind": "$作者视频列表"},
@@ -56,8 +47,6 @@ async def startup_event():
             }}
         ]
         data = list(collection.aggregate(pipeline))
-
-        # 构建查找索引
         for item in data:
             author = item.get("author", "")
             title = item.get("video_title", "")
@@ -71,10 +60,9 @@ async def startup_event():
 
 
 @app.get("/xovideos")
-@cache(expire=7200)  # 2小时缓存
+@cache(expire=7200)
 async def get_videos(author: str = Query(None)):
     try:
-        # 如果请求特定作者，则过滤数据
         if author:
             filtered_data = []
             for key, value in video_metadata.items():
@@ -88,8 +76,6 @@ async def get_videos(author: str = Query(None)):
                             "duration": value.get("duration")
                         })
             return {"status": "success", "data": filtered_data}
-
-        # 否则返回所有数据的转换版本
         all_data = []
         for key, value in video_metadata.items():
             parts = key.split("/", 1)
@@ -107,10 +93,18 @@ async def get_videos(author: str = Query(None)):
         raise HTTPException(status_code=500, detail=error_msg)
 
 
-# 添加健康检查端点
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+# 添加文档端点
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url="/api/openapi.json",
+        title="FastAPI - Swagger UI"
+    )
 
 
 if __name__ == "__main__":

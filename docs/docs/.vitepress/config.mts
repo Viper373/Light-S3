@@ -13,7 +13,7 @@ export default defineConfig({
     //导航栏
     nav: [
       { text: '主页', link: '/' },
-      { text: 'API接口示例', link: 'http://127.0.0.1:8000/docs' },
+      { text: 'API接口示例', link: 'http://s4.viper3.top/api/docs' },
     ],
     //本地搜索 //
     search: {

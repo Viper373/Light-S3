@@ -5,6 +5,7 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
+        "buildCommand": "vue-cli-service build",
         "distDir": "dist"
       }
     },
@@ -19,6 +20,7 @@
       "src": "docs/package.json",
       "use": "@vercel/static-build",
       "config": {
+        "buildCommand": "npm run build",
         "distDir": "docs/docs/.vitepress/dist"
       }
     }
