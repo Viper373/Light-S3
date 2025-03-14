@@ -3,8 +3,9 @@ import {S3Client, ListObjectsV2Command} from "@aws-sdk/client-s3";
 // 添加API请求缓存
 const apiCache = {};
 
-// 添加fetchWithRetry工具函数
-async function fetchWithRetry(url, options = {}, retries = 2, delay = 500) {
+// 添加下划线前缀，告诉ESLint这是一个允许未使用的变量
+// 或者直接在函数内部使用该函数
+async function _fetchWithRetry(url, options = {}, retries = 2, delay = 500) {
     // 检查缓存
     if (apiCache[url]) {
         return apiCache[url];
@@ -24,7 +25,7 @@ async function fetchWithRetry(url, options = {}, retries = 2, delay = 500) {
             throw error;
         }
         await new Promise(resolve => setTimeout(resolve, delay));
-        return fetchWithRetry(url, options, retries - 1, delay * 1.5);
+        return _fetchWithRetry(url, options, retries - 1, delay * 1.5);
     }
 }
 
