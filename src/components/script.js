@@ -163,88 +163,98 @@ export default {
                 this.files = this.directoryCache[this.currentPath];
                 return;
             }
-
             this.loading = true;
             this.error = null;
-
-            // 获取 S3 文件列表
-            const command = new ListObjectsV2Command({
-                Bucket: process.env.VUE_APP_S3_BUCKET,
-                Prefix: this.currentPath,
-                Delimiter: '/',
-            });
-            const s3Response = await this.s3Client.send(command);
-
-            // 处理目录
-            const dirs = (s3Response.CommonPrefixes || []).map((prefix) => {
-                const parts = prefix.Prefix.split('/').filter((p) => p);
-                return {
-                    Key: prefix.Prefix,
-                    IsDirectory: true,
-                    name: parts[parts.length - 1] || '',
-                };
-            });
-
-            // 处理文件
-            const files = (s3Response.Contents || [])
-                .filter((file) => !file.Key.endsWith('/'))
-                .map((file) => {
-                    const parts = file.Key.split('/').filter((p) => p);
-                    const fileName = parts.pop() || '';
-                    const name = fileName.replace(/\.[^.]+$/, ''); // 移除扩展名
-                    const author = parts[parts.length - 1]; // 作者是最后一个目录名
-
+            
+            try {
+                // 获取 S3 文件列表
+                const command = new ListObjectsV2Command({
+                    Bucket: process.env.VUE_APP_S3_BUCKET,
+                    Prefix: this.currentPath,
+                    Delimiter: '/',
+                });
+                const s3Response = await this.s3Client.send(command);
+            
+                // 处理目录
+                const dirs = (s3Response.CommonPrefixes || []).map((prefix) => {
+                    const parts = prefix.Prefix.split('/').filter((p) => p);
                     return {
-                        Key: file.Key,
-                        IsDirectory: false,
-                        name,
-                        author,
-                        Size: file.Size,
-                        LastModified: file.LastModified?.toISOString(),
-                        thumbnailUrl: `${process.env.IMG_CDN}/${process.env.GH_OWNER}/${process.env.GH_REPO}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`,
-                        videoUrl: `${process.env.VUE_APP_S3_ENDPOINT.replace(process.env.VUE_APP_S3_DOMAIN, process.env.VUE_APP_S3_CUSTOM_DOMAIN)}/${process.env.VUE_APP_S3_BUCKET}/${encodeURIComponent(file.Key)}`,
-                        views: null,
-                        duration: null
+                        Key: prefix.Prefix,
+                        IsDirectory: true,
+                        name: parts[parts.length - 1] || '',
                     };
                 });
-
-            // 收集有效作者
-            const validAuthors = [...new Set(files.map(file => file.author))]
-                .filter(author => author && !this.invalidAuthors.includes(author));
-
-            // 批量获取视频元数据
-            const metadata = {};
-            const authorBatches = this.chunkArray(validAuthors, 3); // 每批最多3个作者
-
-            for (const batch of authorBatches) {
-                await Promise.all(batch.map(async (author) => {
-                    const data = await fetchWithRetry(`/api/xovideos?author=${encodeURIComponent(author)}`);
-                    if (data.status === 'success') {
-                        data.data.forEach(item => {
-                            const key = `${item.author}/${item.video_title}`;
-                            metadata[key] = {
-                                views: item.video_views,
-                                duration: item.duration
-                            };
-                        });
-                    }
-                }));
-            }
-
-            // 匹配元数据到文件
-            files.forEach(file => {
-                const key = `${file.author}/${file.name}`;
-                if (metadata[key]) {
-                    file.views = metadata[key].views;
-                    file.duration = metadata[key].duration;
+            
+                // 处理文件
+                const files = (s3Response.Contents || [])
+                    .filter((file) => !file.Key.endsWith('/'))
+                    .map((file) => {
+                        const parts = file.Key.split('/').filter((p) => p);
+                        const fileName = parts.pop() || '';
+                        const name = fileName.replace(/\.[^.]+$/, ''); // 移除扩展名
+                        const author = parts[parts.length - 1]; // 作者是最后一个目录名
+            
+                        return {
+                            Key: file.Key,
+                            IsDirectory: false,
+                            name,
+                            author,
+                            Size: file.Size,
+                            LastModified: file.LastModified?.toISOString(),
+                            thumbnailUrl: `${process.env.IMG_CDN}/${process.env.GH_OWNER}/${process.env.GH_REPO}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`,
+                            videoUrl: `${process.env.VUE_APP_S3_ENDPOINT.replace(process.env.VUE_APP_S3_DOMAIN, process.env.VUE_APP_S3_CUSTOM_DOMAIN)}/${process.env.VUE_APP_S3_BUCKET}/${encodeURIComponent(file.Key)}`,
+                            views: null,
+                            duration: null
+                        };
+                    });
+            
+                // 收集所有作者 - 不过滤任何作者
+                const authors = [...new Set(files.map(file => file.author))].filter(author => author);
+            
+                // 获取视频元数据
+                const metadata = {};
+                
+                // 将作者分批处理，每批3个
+                for (let i = 0; i < authors.length; i += 3) {
+                    const batch = authors.slice(i, i + 3);
+                    await Promise.all(batch.map(async (author) => {
+                        try {
+                            const response = await fetchWithRetry(`/api/xovideos?author=${encodeURIComponent(author)}`);
+                            const data = await response.json();
+                            if (data.status === 'success') {
+                                data.data.forEach(item => {
+                                    const key = `${item.author}/${item.video_title}`;
+                                    metadata[key] = {
+                                        views: item.video_views,
+                                        duration: item.duration
+                                    };
+                                });
+                            }
+                        } catch (error) {
+                            console.error(`获取作者 ${author} 的元数据失败:`, error);
+                        }
+                    }));
                 }
-            });
-
-            // 缓存并更新文件列表
-            this.directoryCache[this.currentPath] = [...dirs, ...files];
-            this.files = this.directoryCache[this.currentPath];
-
-        }
+            
+                // 匹配元数据到文件
+                files.forEach(file => {
+                    const key = `${file.author}/${file.name}`;
+                    if (metadata[key]) {
+                        file.views = metadata[key].views;
+                        file.duration = metadata[key].duration;
+                    }
+                });
+            
+                // 缓存并更新文件列表
+                this.directoryCache[this.currentPath] = [...dirs, ...files];
+                this.files = this.directoryCache[this.currentPath];
+            } catch (error) {
+                console.error('加载文件列表失败:', error);
+                this.error = `加载失败: ${error.message}`;
+            } finally {
+                this.loading = false;
+            }
+        },
     },
 
     // 添加数组分块方法
