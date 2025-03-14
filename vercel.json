@@ -3,14 +3,9 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/node",
+      "use": "@vercel/static-build",
       "config": {
-        "scripts": {
-          "start": "npm run serve"
-        },
-        "env": {
-          "NODE_VERSION": "18.20.0"
-        }
+        "distDir": "dist"
       }
     },
     {
@@ -24,10 +19,7 @@
       "src": "docs/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "docs/docs/.vitepress/dist",
-        "env": {
-          "NODE_VERSION": "18.20.0"
-        }
+        "distDir": "docs/docs/.vitepress/dist"
       }
     }
   ],
@@ -35,6 +27,6 @@
     { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/docs/(.*)", "dest": "/docs/docs/.vitepress/dist/$1" },
     { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/index.html" }
+    { "src": "/.*", "dest": "/dist/index.html" }
   ]
 }
