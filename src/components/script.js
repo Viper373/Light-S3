@@ -195,6 +195,18 @@ export default {
                         const name = fileName.replace(/\.[^.]+$/, ''); // 移除扩展名
                         const author = parts[parts.length - 1]; // 作者是最后一个目录名
                 
+                        // 修复封面图片URL构建
+                        const imgCdn = process.env.VUE_APP_IMG_CDN || '';
+                        const ghOwner = process.env.VUE_APP_GH_OWNER || '';
+                        const ghRepo = process.env.VUE_APP_GH_REPO || '';
+                        const thumbnailUrl = `${imgCdn}/${ghOwner}/${ghRepo}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`;
+                        
+                        // 修复视频URL域名替换
+                        const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || '';
+                        const s3Domain = process.env.VUE_APP_S3_DOMAIN || '';
+                        const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                        const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + '/' + process.env.VUE_APP_S3_BUCKET + '/' + encodeURIComponent(file.Key);
+                        
                         return {
                             Key: file.Key,
                             IsDirectory: false,
@@ -202,8 +214,8 @@ export default {
                             author,
                             Size: file.Size,
                             LastModified: file.LastModified?.toISOString(),
-                            thumbnailUrl: `${process.env.IMG_CDN}/${process.env.GH_OWNER}/${process.env.GH_REPO}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`,
-                            videoUrl: `${process.env.VUE_APP_S3_ENDPOINT.replace(process.env.VUE_APP_S3_DOMAIN, process.env.VUE_APP_S3_CUSTOM_DOMAIN)}/${process.env.VUE_APP_S3_BUCKET}/${encodeURIComponent(file.Key)}`,
+                            thumbnailUrl,
+                            videoUrl,
                             views: null,
                             duration: null
                         };
@@ -223,33 +235,22 @@ export default {
                             // 修复：处理特殊字符和空格，确保URL编码正确
                             const safeAuthor = encodeURIComponent(author.trim());
                             
-                            // 添加错误处理和重试逻辑
-                            let retries = 2;
-                            let success = false;
-                            let data;
+                            // 修复API请求路径
+                            const apiUrl = `/api/xovideos?author=${safeAuthor}`;
+                            console.log(`请求API: ${apiUrl}`); // 添加日志
                             
-                            while (retries >= 0 && !success) {
-                                try {
-                                    // 使用相对路径，避免跨域问题
-                                    const response = await fetch(`/api/xovideos?author=${safeAuthor}`);
-                                    
-                                    // 检查响应状态
-                                    if (!response.ok) {
-                                        console.warn(`获取作者 ${author} 的元数据失败: HTTP ${response.status}`);
-                                        throw new Error(`HTTP error! status: ${response.status}`);
-                                    }
-                                    
-                                    data = await response.json();
-                                    success = true;
-                                } catch (err) {
-                                    retries--;
-                                    if (retries < 0) throw err;
-                                    // 等待一段时间后重试
-                                    await new Promise(resolve => setTimeout(resolve, 500));
-                                }
+                            const response = await fetch(apiUrl);
+                            
+                            // 检查响应状态
+                            if (!response.ok) {
+                                console.warn(`获取作者 ${author} 的元数据失败: HTTP ${response.status}`);
+                                throw new Error(`HTTP error! status: ${response.status}`);
                             }
                             
-                            if (success && data.status === 'success') {
+                            const data = await response.json();
+                            console.log(`API响应:`, data); // 添加日志
+                            
+                            if (data.status === 'success') {
                                 data.data.forEach(item => {
                                     const key = `${item.author}/${item.video_title}`;
                                     metadata[key] = {
