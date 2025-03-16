@@ -2,34 +2,39 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "buildCommand": "vue-cli-service build",
-        "distDir": "dist"
-      }
-    },
-    {
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "runtime": "python3.10.11"
+        "pythonVersion": "3.10.11"
       }
     },
     {
       "src": "docs/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "npm run build",
         "distDir": "docs/.vitepress/dist"
+      }
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
       }
     }
   ],
   "routes": [
-    { "src": "/api/xovideos", "dest": "/api/index.py" },
-    { "src": "/api/(.*)", "dest": "/api/index.py" },
-    { "src": "/docs/(.*)", "dest": "/docs/.vitepress/dist/$1" },
-    { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/dist/index.html" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/docs/(.*)",
+      "dest": "/docs/.vitepress/dist/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/index.html"
+    }
   ]
 }
