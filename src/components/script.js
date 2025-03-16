@@ -205,7 +205,7 @@ export default {
                         const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || '';
                         const s3Domain = process.env.VUE_APP_S3_DOMAIN || '';
                         const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
-                        const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + '/' + process.env.VUE_APP_S3_BUCKET + '/' + encodeURIComponent(file.Key);
+                        const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + '/' + encodeURIComponent(file.Key);
                         
                         return {
                             Key: file.Key,
