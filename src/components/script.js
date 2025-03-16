@@ -166,7 +166,7 @@ export default {
             }
             this.loading = true;
             this.error = null;
-            
+
             try {
                 // 获取 S3 文件列表
                 const command = new ListObjectsV2Command({
@@ -194,19 +194,19 @@ export default {
                         const fileName = parts.pop() || '';
                         const name = fileName.replace(/\.[^.]+$/, ''); // 移除扩展名
                         const author = parts[parts.length - 1]; // 作者是最后一个目录名
-                
+
                         // 修复封面图片URL构建
                         const imgCdn = process.env.VUE_APP_IMG_CDN || '';
                         const ghOwner = process.env.VUE_APP_GH_OWNER || '';
                         const ghRepo = process.env.VUE_APP_GH_REPO || '';
                         const thumbnailUrl = `${imgCdn}/${ghOwner}/${ghRepo}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`;
-                        
+
                         // 修复视频URL域名替换
                         const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || '';
                         const s3Domain = process.env.VUE_APP_S3_DOMAIN || '';
                         const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
                         const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + '/' + encodeURIComponent(file.Key);
-                        
+
                         return {
                             Key: file.Key,
                             IsDirectory: false,
@@ -220,13 +220,13 @@ export default {
                             duration: null
                         };
                     });
-            
+
                 // 收集所有作者 - 不过滤任何作者
                 const authors = [...new Set(files.map(file => file.author))].filter(author => author);
-            
+
                 // 获取视频元数据
                 const metadata = {};
-                
+
                 // 将作者分批处理，每批3个
                 for (let i = 0; i < authors.length; i += 3) {
                     const batch = authors.slice(i, i + 3);
@@ -234,15 +234,15 @@ export default {
                         try {
                             // 修复：处理特殊字符和空格，确保URL编码正确
                             const safeAuthor = encodeURIComponent(author.trim());
-                            
+
                             // 使用完整的API URL，确保请求正确路由
                             // 检测当前环境是开发环境还是生产环境
-                            const baseUrl = process.env.NODE_ENV === 'development' 
-                                ? '' 
+                            const baseUrl = process.env.NODE_ENV === 'development'
+                                ? ''
                                 : window.location.origin;
                             const apiUrl = `${baseUrl}/api/xovideos?author=${safeAuthor}`;
                             console.log(`请求API: ${apiUrl}`); // 添加日志
-                            
+
                             const response = await fetch(apiUrl, {
                                 method: 'GET',
                                 headers: {
@@ -250,16 +250,16 @@ export default {
                                     'Cache-Control': 'no-cache'
                                 },
                             });
-                            
+
                             // 检查响应状态
                             if (!response.ok) {
                                 console.warn(`获取作者 ${author} 的元数据失败: HTTP ${response.status}`);
                                 throw new Error(`HTTP error! status: ${response.status}`);
                             }
-                            
+
                             const data = await response.json();
                             console.log(`API响应:`, data); // 添加日志
-                            
+
                             if (data.status === 'success') {
                                 data.data.forEach(item => {
                                     const key = `${item.author}/${item.video_title}`;
@@ -274,13 +274,13 @@ export default {
                             // 继续处理其他作者，不中断整个流程
                         }
                     }));
-                    
+
                     // 添加小延迟，避免请求过于密集
                     if (i + 3 < authors.length) {
                         await new Promise(resolve => setTimeout(resolve, 100));
                     }
                 }
-            
+
                 // 匹配元数据到文件
                 files.forEach(file => {
                     const key = `${file.author}/${file.name}`;
@@ -289,7 +289,7 @@ export default {
                         file.duration = metadata[key].duration;
                     }
                 });
-            
+
                 // 缓存并更新文件列表
                 this.directoryCache[this.currentPath] = [...dirs, ...files];
                 this.files = this.directoryCache[this.currentPath];
@@ -361,6 +361,15 @@ export default {
             }
         },
 
+        /** 格式化文件大小 */
+        formatSize(bytes) {
+            if (typeof bytes !== 'number') return '0 B';
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+            if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
+            return `${(bytes / 1073741824).toFixed(1)} GB`;
+        },
+
         /** 处理鼠标按钮事件 */
         handleMouseButtons(event) {
             if (event.button === 3) {
@@ -370,28 +379,17 @@ export default {
             }
         },
 
-        /** 处理面包屑导航点击 */
-        handleBreadcrumbClick(index) {
-            if (index < 0) {
-                // 点击首页
-                this.updateHistory('');
-                this.currentPath = '';
-            } else {
-                // 点击中间路径
-                const parts = this.pathParts.slice(0, index + 1);
-                const newPath = parts.join('/') + '/';
-                this.updateHistory(newPath);
-                this.currentPath = newPath;
-            }
+        /** 导航到根目录 */
+        navigateToRoot() {
+            this.updateHistory('');
+            this.currentPath = '';
         },
 
-        /** 格式化文件大小 */
-        formatSize(bytes) {
-            if (typeof bytes !== 'number') return '0 B';
-            if (bytes < 1024) return `${bytes} B`;
-            if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-            if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
-            return `${(bytes / 1073741824).toFixed(1)} GB`;
+        /** 面包屑导航 */
+        navigateTo(index) {
+            const newPath = this.pathParts.slice(0, index + 1).join('/') + '/';
+            this.updateHistory(newPath);
+            this.currentPath = newPath;
         },
     }
 };
