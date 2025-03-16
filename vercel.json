@@ -26,9 +26,7 @@
     }
   ],
   "routes": [
-    { "src": "/api/xovideos(.*)", "dest": "/api/index.py" },
-    { "src": "/api/health", "dest": "/api/index.py" },
-    { "src": "/api/docs", "dest": "/api/index.py" },
+    { "src": "/api/xovideos", "dest": "/api/index.py" },
     { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/docs/(.*)", "dest": "/docs/.vitepress/dist/$1" },
     { "handle": "filesystem" },

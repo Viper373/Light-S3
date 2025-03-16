@@ -235,11 +235,21 @@ export default {
                             // 修复：处理特殊字符和空格，确保URL编码正确
                             const safeAuthor = encodeURIComponent(author.trim());
                             
-                            // 修复API请求路径
-                            const apiUrl = `/api/xovideos?author=${safeAuthor}`;
+                            // 使用完整的API URL，确保请求正确路由
+                            // 检测当前环境是开发环境还是生产环境
+                            const baseUrl = process.env.NODE_ENV === 'development' 
+                                ? '' 
+                                : window.location.origin;
+                            const apiUrl = `${baseUrl}/api/xovideos?author=${safeAuthor}`;
                             console.log(`请求API: ${apiUrl}`); // 添加日志
                             
-                            const response = await fetch(apiUrl);
+                            const response = await fetch(apiUrl, {
+                                method: 'GET',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Cache-Control': 'no-cache'
+                                },
+                            });
                             
                             // 检查响应状态
                             if (!response.ok) {
@@ -325,6 +335,62 @@ export default {
                     key: file.Key,
                 };
                 this.videoPlayerVisible = true;
+            }
+        },
+
+        /** 关闭视频播放器 */
+        closeVideoPlayer() {
+            this.videoPlayerVisible = false;
+            this.currentVideo = null;
+        },
+
+        /** 格式化文件大小 */
+        formatSize(bytes) {
+            if (typeof bytes !== 'number') return '0 B';
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+            if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
+            return `${(bytes / 1073741824).toFixed(1)} GB`;
+        },
+
+        /** 格式化日期 */
+        formatDate(timestamp) {
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                }).replace(/\//g, '-');
+            } catch (e) {
+                return 'N/A';
+            }
+        },
+
+        /** 处理鼠标按钮事件 */
+        handleMouseButtons(event) {
+            if (event.button === 3) {
+                this.navigateBack();
+            } else if (event.button === 4) {
+                this.navigateForward();
+            }
+        },
+
+        /** 处理面包屑导航点击 */
+        handleBreadcrumbClick(index) {
+            if (index < 0) {
+                // 点击首页
+                this.updateHistory('');
+                this.currentPath = '';
+            } else {
+                // 点击中间路径
+                const parts = this.pathParts.slice(0, index + 1);
+                const newPath = parts.join('/') + '/';
+                this.updateHistory(newPath);
+                this.currentPath = newPath;
             }
         },
 
