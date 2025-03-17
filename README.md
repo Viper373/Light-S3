@@ -32,30 +32,24 @@ Light-S3·微光小溪是一个基于 Vue.js 和 FastAPI 的 S3 兼容存储服�
 
 ```
 Light-S3/
-├── .env.production       # 生产环境变量配置
+├── .env.example          # 环境变量示例配置
 ├── .eslintrc.js          # ESLint 配置
 ├── .gitignore            # Git 忽略文件配置
-├── Procfile              # Heroku 部署配置
+├── api.py                # FastAPI 后端入口点
+├── LINCENSE              # 许可证文件
+├── Procfile              # 部署配置
 ├── README.md             # 项目说明文档
 ├── package.json          # NPM 包配置
 ├── requirements.txt      # Python 依赖配置
 ├── vercel.json           # Vercel 部署配置
 ├── vue.config.js         # Vue CLI 配置
-├── api/                  # Vercel Serverless Functions
-│   └── index.py          # FastAPI 后端入口点
-├── docs/                 # VitePress 文档系统
-│   ├── docs/             # 文档内容
-│   ├── .vitepress/       # VitePress 配置
-│   └── package.json      # 文档系统 NPM 配置
 ├── public/               # 静态资源
 │   └── index.html        # HTML 入口文件
 └── src/                  # 源代码
 ├── App.vue           # 主应用组件
 ├── main.js           # 应用入口
 ├── components/       # 组件目录
-│   ├── S3Browser.vue # S3浏览器组件
-│   ├── script.js     # S3浏览器逻辑
-│   └── style.css     # S3浏览器样式
+│   └── S3Browser.vue # S3浏览器组件
 └── utils/            # 工具函数
 └── s3.js         # S3 工具函数
 ```
