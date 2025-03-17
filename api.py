@@ -54,7 +54,7 @@ logger.info("FastAPICache 初始化完成")
 async def lifespan(app: FastAPI):
     # 应用启动时执行的代码
     try:
-        if collection:
+        if collection is not None:
             pipeline = [
                 {"$unwind": "$作者视频列表"},
                 {"$project": {
@@ -193,7 +193,7 @@ async def mongodb_status():
             "metadata_count": len(video_metadata)
         }
         
-        if collection:
+        if collection is not None:
             # 测试连接是否有效
             try:
                 # 执行简单查询测试连接
