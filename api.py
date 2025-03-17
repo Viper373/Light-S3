@@ -179,6 +179,61 @@ async def health_check():
     return {"status": "healthy"}
 
 
+# 添加 MongoDB 诊断路由
+@api_router.get("/mongodb-status")
+async def mongodb_status():
+    try:
+        status = {
+            "mongodb_uri": os.getenv("VUE_APP_MONGODB_URI") and "已设置" or "未设置",
+            "db_name": os.getenv("VUE_APP_DB_NAME") and "已设置" or "未设置",
+            "col_name": os.getenv("VUE_APP_COL_NAME") and "已设置" or "未设置",
+            "connection_status": "未连接",
+            "collection_count": 0,
+            "sample_document": None,
+            "metadata_count": len(video_metadata)
+        }
+        
+        if collection:
+            # 测试连接是否有效
+            try:
+                # 执行简单查询测试连接
+                collection.find_one({}, {"_id": 1})
+                status["connection_status"] = "已连接"
+                
+                # 获取文档数量
+                status["collection_count"] = collection.count_documents({})
+                
+                # 获取样本文档
+                sample_doc = collection.find_one()
+                if sample_doc:
+                    # 移除可能的敏感信息
+                    if "_id" in sample_doc:
+                        sample_doc["_id"] = str(sample_doc["_id"])
+                    status["sample_document"] = sample_doc
+                    
+                    # 检查文档结构
+                    status["document_fields"] = list(sample_doc.keys())
+                    
+                    # 检查是否有作者视频列表字段
+                    status["has_author_field"] = "作者名称" in sample_doc
+                    status["has_videos_field"] = "作者视频列表" in sample_doc
+                    
+                    # 尝试找出可能的列表字段
+                    list_fields = []
+                    for field, value in sample_doc.items():
+                        if isinstance(value, list):
+                            list_fields.append(field)
+                    status["list_fields"] = list_fields
+            except Exception as e:
+                status["connection_error"] = str(e)
+        
+        logger.info(f"MongoDB 诊断: {status}")
+        return status
+    except Exception as e:
+        logger.error(f"MongoDB 诊断失败: {str(e)}")
+        return {"status": "error", "message": str(e)}
+
+
 # 将 API 路由器挂载到主应用，添加前缀
 app.mount("/api", api_router)
 
