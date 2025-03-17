@@ -2,7 +2,7 @@
 
 ## 项目概述 🌟
 
-S3Browser 是一个基于 Vue.js 的 S3 兼容存储服务浏览器，允许用户浏览、查看和管理存储在 S3 兼容存储服务中的文件，特别是视频文件。该应用提供了直观的用户界面，支持视频预览、缩略图显示和元数据展示。
+Light-S3·微光小溪是一个基于 Vue.js 和 FastAPI 的 S3 兼容存储服务浏览器，允许用户浏览、查看和管理存储在 S3 兼容存储服务中的文件，特别是视频文件。该应用提供了直观的用户界面，支持视频预览、缩略图显示和元数据展示。
 
 ## 功能特点 ✨
 
@@ -26,7 +26,6 @@ S3Browser 是一个基于 Vue.js 的 S3 兼容存储服务浏览器，允许用�
 - **缓存**: FastAPI Cache
 - **样式**: CSS (自定义样式)
 - **图片懒加载**: Vue-Lazyload
-- **文档系统**: VitePress
 - **部署**: Vercel
 
 ## 项目结构 📂
@@ -61,7 +60,6 @@ Light-S3/
 └── s3.js         # S3 工具函数
 ```
 
-
 ## 环境变量 🔐
 
 项目使用以下环境变量进行配置：
@@ -83,15 +81,15 @@ Light-S3/
 | COL_NAME                 | 集合名称         | pornhub                           |
 
 ## Vercel部署 🚀
+
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Viper373/S3Browser)
 
 点击上方的"Deploy with Vercel"按钮，可以一键将项目部署到Vercel平台。
 部署后，您可以通过以下路径访问不同的服务：
 
 - **前端应用**: `https://your-vercel-domain.vercel.app/`
-- **API文档**: `https://your-vercel-domain.vercel.app/api/docs`
-- **VitePress文档**: `https://your-vercel-domain.vercel.app/docs/`
-在Vercel部署时，需要配置以下环境变量：
+- **API服务**: `https://your-vercel-domain.vercel.app/api/`
+  在Vercel部署时，需要配置以下环境变量：
 
 1. 在Vercel项目设置中，找到"Environment Variables"部分
 2. 添加所有必要的环境变量（参考上面的环境变量表）
@@ -128,11 +126,11 @@ uvicorn app:app
 
 ```bash
 # 克隆仓库
-git clone https://github.com/Viper373/S3Browser.git
-cd S3Browser
+git clone https://github.com/Viper373/Light-S3.git
+cd Light-S3
 
 # 创建并配置环境变量
-在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
+# 在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
 # 安装依赖并启动前端服务
 npm install
 npm run serve
@@ -149,35 +147,11 @@ uvicorn app:app --reload --port 8000
 
 ```
 
-#### VitePress文档部署
-```bash
-# 进入VitePress目录
-cd docs
-# 安装依赖
-npm install
-# 启动开发服务器
-npm run dev
-```
-
-#### 后端部署
-
-```bash
-# 克隆仓库
-git clone https://github.com/Viper373/S3Browser.git
-cd S3Browser
-# 创建并配置环境变量
-在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
-# 安装依赖并启动后端服务
-pip install -r requirements.txt
-uvicorn app:app --reload --port 8000
-```
-
-
-## 后端 API 📡
+## API 接口说明 📚
 
 - **GET /api/xovideos**: 获取视频元数据
-  - 参数: `author` (可选) - 按作者筛选视频
-  - 返回: 包含视频标题、观看次数和时长的 JSON 数据
+    - 参数: `author` (可选) - 按作者筛选视频
+    - 返回: 包含视频标题、观看次数和时长的 JSON 数据
   ```json
   {
   "status": "success",
@@ -192,28 +166,58 @@ uvicorn app:app --reload --port 8000
   }
   ```
 - **GET /api/health**: 检查后端服务健康状态
-  - 返回: 包含状态信息的 JSON 数据
+    - 返回: 包含状态信息的 JSON 数据
   ```json
   {
     "status": "healthy"
   }
   ```
 
-## 安全注意事项 🔒
+- **GET /api/mongodb-status**: 检查 MongoDB 连接状态
+    - 返回: 包含 MongoDB 连接状态的 JSON 数据
+  ```json
+  {
+    "mongodb_uri": "已设置",
+    "db_name": "已设置",
+    "col_name": "已设置",
+    "connection_status": "已连接",
+    "collection_count": 43,
+    "sample_document": { ... },
+    "metadata_count": 86
+  }
+  ```
 
-- 不要在版本控制中提交 `.env.local` 文件
-- 在生产环境中使用环境变量或密钥管理服务存储敏感信息
-- 考虑使用 AWS IAM 角色而不是硬编码的访问密钥
-- 限制 CORS 配置，只允许必要的源
+## MongoDB 数据结构 🗃️
+
+```json
+  {
+  "作者名称": "作者名称",
+  "作者ID": "作者ID",
+  "作者主页": "作者主页URL",
+  "作者头像": "头像URL",
+  "作者视频列表": [
+    {
+      "视频标题": "视频标题",
+      "视频封面": "封面URL",
+      "视频链接": "视频URL",
+      "下载链接": "下载URL",
+      "视频时长": "时长",
+      "视频观看次数": "观看次数",
+      "下载状态": 0,
+      "封面状态": 0
+    }
+  ],
+  "作者视频数量": 6
+}
+```
 
 ## TODO ✈
 
-- 添加用户认证系统
+- 实现视频搜索功能
 - 实现文件上传功能
 - 添加视频转码功能
 - 优化移动端体验
 - 添加更多自定义主题
-
 
 ## 贡献指南 👥
 
