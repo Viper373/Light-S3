@@ -100,7 +100,7 @@ git clone https://github.com/Viper373/Light-S3.git
 cd Light-S3
 
 # 创建并配置环境变量
-# 在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
+# 在本地创建 `.env.local` 文件，并添加必要的环境变量（参考.env.example）
 
 # 安装依赖并启动前端服务
 npm install
