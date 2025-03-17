@@ -67,69 +67,65 @@ async def lifespan(app: FastAPI):
                 if has_author_field and has_videos_field:
                     # 使用正确的字段名构建管道
                     pipeline = [
+                        {"$match": {"作者视频列表": {"$ne": []}}},  # 确保作者视频列表不为空
                         {"$unwind": "$作者视频列表"},
+                        {"$match": {"作者视频列表.视频标题": {"$ne": ""}}},  # 确保视频标题不为空
                         {"$project": {
                             "_id": 0,
-                            "author": "$作者名称",
+                            "author": {"$cond": [{"$eq": ["$作者名称", ""]}, "未知作者", "$作者名称"]},  # 处理空作者名称
                             "video_title": "$作者视频列表.视频标题",
                             "video_views": "$作者视频列表.视频观看次数",
                             "duration": "$作者视频列表.视频时长"
                         }}
                     ]
                     logger.info(f"使用标准管道查询: {pipeline}")
-                else:
-                    # 尝试找出可能的列表字段
-                    list_fields = []
-                    for field, value in sample_doc.items():
-                        if isinstance(value, list) and value and isinstance(value[0], dict):
-                            list_fields.append(field)
                     
-                    if list_fields:
-                        author_field = next((k for k in sample_doc.keys() if "作者" in k or "author" in k.lower()), None)
-                        videos_field = list_fields[0]  # 假设第一个列表字段是视频列表
-                        
-                        # 检查视频列表中的第一个元素的结构
-                        video_sample = sample_doc[videos_field][0] if sample_doc[videos_field] else {}
-                        title_field = next((k for k in video_sample.keys() if "标题" in k or "title" in k.lower()), None)
-                        views_field = next((k for k in video_sample.keys() if "观看" in k or "view" in k.lower()), None)
-                        duration_field = next((k for k in video_sample.keys() if "时长" in k or "duration" in k.lower()), None)
-                        
-                        logger.info(f"推断字段: author={author_field}, videos={videos_field}, title={title_field}, views={views_field}, duration={duration_field}")
-                        
-                        # 构建自适应管道
-                        pipeline = [
-                            {"$unwind": f"${videos_field}"},
-                            {"$project": {
-                                "_id": 0,
-                                "author": f"${author_field}" if author_field else "$_id",
-                                "video_title": f"${videos_field}.{title_field}" if title_field else "",
-                                "video_views": f"${videos_field}.{views_field}" if views_field else "",
-                                "duration": f"${videos_field}.{duration_field}" if duration_field else ""
-                            }}
-                        ]
-                        logger.info(f"使用自适应管道查询: {pipeline}")
-                
-                # 执行聚合查询
-                data = list(collection.aggregate(pipeline))
-                logger.info(f"从 MongoDB 加载了 {len(data)} 条视频元数据")
-                
-                # 添加数据样本日志
-                if data:
-                    logger.info(f"数据样本: {data[0]}")
+                    # 执行聚合查询
+                    data = list(collection.aggregate(pipeline))
+                    logger.info(f"从 MongoDB 加载了 {len(data)} 条视频元数据")
                     
-                    # 处理数据
-                    for item in data:
-                        author = item.get("author", "")
-                        title = item.get("video_title", "")
-                        if author and title:  # 确保作者和标题都不为空
-                            key = f"{author}/{title}"
-                            video_metadata[key] = {
-                                "views": item.get("video_views"),
-                                "duration": item.get("duration")
-                            }
-                    logger.info(f"成功加载 {len(video_metadata)} 条视频元数据")
+                    # 添加数据样本日志
+                    if data:
+                        logger.info(f"数据样本: {data[0]}")
+                        
+                        # 处理数据
+                        for item in data:
+                            author = item.get("author", "未知作者")
+                            title = item.get("video_title", "")
+                            if title:  # 确保标题不为空
+                                key = f"{author}/{title}"
+                                video_metadata[key] = {
+                                    "views": item.get("video_views", "0"),
+                                    "duration": item.get("duration", "0:00")
+                                }
+                        logger.info(f"成功加载 {len(video_metadata)} 条视频元数据")
+                    else:
+                        logger.warning("聚合查询返回空结果，尝试直接查询所有文档")
+                        
+                        # 如果聚合查询返回空，尝试直接查询所有文档并手动处理
+                        all_docs = list(collection.find({}))
+                        logger.info(f"直接查询返回 {len(all_docs)} 条文档")
+                        
+                        video_count = 0
+                        for doc in all_docs:
+                            author = doc.get("作者名称", "未知作者")
+                            if author == "":
+                                author = "未知作者"
+                                
+                            videos = doc.get("作者视频列表", [])
+                            for video in videos:
+                                title = video.get("视频标题", "")
+                                if title:  # 确保标题不为空
+                                    key = f"{author}/{title}"
+                                    video_metadata[key] = {
+                                        "views": video.get("视频观看次数", "0"),
+                                        "duration": video.get("视频时长", "0:00")
+                                    }
+                                    video_count += 1
+                        
+                        logger.info(f"通过直接查询成功加载 {video_count} 条视频元数据")
                 else:
-                    logger.warning("聚合查询返回空结果")
+                    logger.warning("文档结构不包含预期的字段，无法加载元数据")
             else:
                 logger.warning("无法获取样本文档")
         else:
@@ -166,16 +162,52 @@ async def get_videos(author: str = Query(None)):
         # 添加元数据诊断
         if not video_metadata:
             logger.warning("元数据为空，可能是 MongoDB 连接或查询问题")
-            # 如果元数据为空，返回一些测试数据
-            if author:
-                test_data = [{
-                    "author": author,
-                    "video_title": "测试视频",
-                    "video_views": "100",
-                    "duration": "10:00"
-                }]
-                return {"status": "success", "data": test_data, "note": "使用测试数据，实际数据库连接可能有问题"}
+            
+            # 尝试直接从数据库查询
+            if collection is not None:
+                try:
+                    if author:
+                        query = {"作者名称": author}
+                    else:
+                        query = {}
+                    
+                    # 直接从数据库查询
+                    docs = list(collection.find(query, {"_id": 0, "作者名称": 1, "作者视频列表": 1}))
+                    logger.info(f"直接查询返回 {len(docs)} 条文档")
+                    
+                    result_data = []
+                    for doc in docs:
+                        current_author = doc.get("作者名称", "未知作者")
+                        if current_author == "":
+                            current_author = "未知作者"
+                            
+                        videos = doc.get("作者视频列表", [])
+                        for video in videos:
+                            title = video.get("视频标题", "")
+                            if title:  # 确保标题不为空
+                                result_data.append({
+                                    "author": current_author,
+                                    "video_title": title,
+                                    "video_views": video.get("视频观看次数", "0"),
+                                    "duration": video.get("视频时长", "0:00")
+                                })
+                    
+                    if result_data:
+                        logger.info(f"直接查询返回 {len(result_data)} 条视频数据")
+                        return {"status": "success", "data": result_data}
+                except Exception as db_error:
+                    logger.error(f"直接查询数据库失败: {str(db_error)}")
+            
+            # 如果直接查询也失败，返回测试数据
+            test_data = [{
+                "author": author or "测试作者",
+                "video_title": "测试视频",
+                "video_views": "100",
+                "duration": "10:00"
+            }]
+            return {"status": "success", "data": test_data, "note": "使用测试数据，实际数据库连接可能有问题"}
 
+        # 原有的元数据处理逻辑保持不变
         if author:
             filtered_data = []
             for key, value in video_metadata.items():
