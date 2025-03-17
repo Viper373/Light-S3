@@ -37,11 +37,14 @@ except Exception as e:
     logger.error(f"MongoDB 连接失败: {str(e)}")
     collection = None
 
+# 初始化缓存，确保在导入时就执行
+FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
+logger.info("FastAPICache 初始化完成")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 应用启动时执行的代码
-    FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
     try:
         if collection:
             pipeline = [
@@ -136,6 +139,7 @@ async def health_check():
 
 # 将 API 路由器挂载到主应用，添加前缀
 app.mount("/api", api_router)
+
 
 # 添加根路由，用于测试 API 是否正常工作
 @app.get("/")
