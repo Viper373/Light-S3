@@ -62,7 +62,7 @@ Light-S3/
 
 ## 环境变量 🔐
 
-项目使用以下环境变量进行配置：
+项目使用以下环境变量进行配置（参考 `.env.example`）：
 
 | 变量名                      | 描述           | 示例值                               |
 |--------------------------|--------------|-----------------------------------|
@@ -73,13 +73,44 @@ Light-S3/
 | VUE_APP_S3_BUCKET        | S3 存储桶名称     | viper3                            |
 | VUE_APP_S3_DOMAIN        | S3 初始访问域名    | viper3.s3.bitiful.net             |
 | VUE_APP_S3_CUSTOM_DOMAIN | S3自定义域名      | bitiful.viper3.top                |
-| IMG_CDN                  | 图床CDN        | https://cdn.jsdelivr.net/gh       |
-| GH_OWNER                 | Github用户名    | Viper373                          |
-| GH_REPO                  | 图床Github仓库名称 | picx-images-hosting               |
-| MONGODB_URI              | MongoDB连接URI | mongodb://localhost:27017/        |
-| DB_NAME                  | 数据库名称        | XOVideos                          |
-| COL_NAME                 | 集合名称         | pornhub                           |
+| VUE_APP_IMG_CDN          | 图床CDN        | https://cdn.jsdelivr.net/gh       |
+| VUE_APP_GH_OWNER         | Github用户名    | Viper373                          |
+| VUE_APP_GH_REPO          | 图床Github仓库名称 | picx-images-hosting               |
+| VUE_APP_MONGODB_URI      | MongoDB连接URI | mongodb://localhost:27017/        |
+| VUE_APP_DB_NAME          | 数据库名称        | XOVideos                          |
+| VUE_APP_COL_NAME         | 集合名称         | pornhub                           |
 
+## Vercel部署 🚀
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Viper373/Light-S3)
+
+点击上方的"Deploy with Vercel"按钮，可以一键将项目部署到Vercel平台。
+部署后，您可以通过以下路径访问不同的服务：
+
+- **前端应用**: `https://your-vercel-domain.vercel.app/`
+- **API服务**: `https://your-vercel-domain.vercel.app/api/`
+
+在Vercel部署时，需要配置以下环境变量：
+
+1. 在Vercel项目设置中，找到"Environment Variables"部分
+2. 添加所有必要的环境变量（参考上面的环境变量表）
+3. 确保敏感信息（如S3密钥和MongoDB URI）已正确设置
+
+## 本地开发环境部署 🚀
+
+### 前端部署
+
+```bash
+# 克隆仓库
+git clone https://github.com/Viper373/Light-S3.git
+cd Light-S3
+
+# 创建并配置环境变量
+# 在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
+
+# 安装依赖并启动前端服务
+npm install
+npm run serve
 ## Vercel部署 🚀
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Viper373/S3Browser)
