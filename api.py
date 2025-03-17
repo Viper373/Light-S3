@@ -7,7 +7,7 @@ from fastapi_cache.decorator import cache
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
-# 加载环境变量
+# 加载上级目录的.env文件
 load_dotenv()
 
 app = FastAPI()
@@ -24,6 +24,7 @@ app.add_middleware(
 # 连接MongoDB
 try:
     mongodb_uri = os.getenv("VUE_APP_MONGODB_URI")
+    print(mongodb_uri)
     client = MongoClient(
         mongodb_uri,
         maxPoolSize=10,
