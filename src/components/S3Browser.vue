@@ -76,54 +76,77 @@
     </nav>
 
     <!-- 搜索结果区域 -->
+    <!-- 搜索结果 -->
     <div v-if="isSearchActive" class="search-results">
       <div class="search-results-header">
-        <h3>搜索结果: {{ searchResults.length }} 个匹配项</h3>
+        <h2>搜索结果: {{ searchResults.length }} 个匹配项</h2>
         <button class="close-search" @click="clearSearch">关闭</button>
       </div>
 
-      <div v-if="searchResults.length === 0 && !searchLoading" class="no-results">
-        没有找到匹配 "{{ searchQuery }}" 的结果
-        <div class="search-suggestions">
-          <p>建议尝试：</p>
-          <ul>
-            <li>检查拼写</li>
-            <li>使用更少或不同的关键词</li>
-            <li>尝试浏览目录查找</li>
-          </ul>
-          <button class="load-more-btn" @click="loadMoreForSearch">加载更多目录</button>
-        </div>
-      </div>
-
-      <div v-if="searchLoading" class="search-loading">
-        <div class="loader"></div>
-        <span>正在搜索...</span>
-      </div>
-
-      <div v-else class="search-results-grid">
-        <!-- 文件搜索结果 -->
-        <div v-for="result in searchResults" :key="result.Key || result.id" class="search-result-item"
+      <!-- 使用与文件列表相同的网格布局 -->
+      <div class="file-grid">
+        <!-- 搜索结果项 -->
+        <div v-for="result in searchResults" :key="result.Key || result.id" class="file-item"
           @click="handleSearchResultClick(result)">
-          <div class="result-icon">
-            <svg v-if="result.IsDirectory" viewBox="0 0 24 24" width="24" height="24">
-              <path fill="currentColor"
-                d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-            </svg>
-            <svg v-else-if="result.type === 'video'" viewBox="0 0 24 24" width="24" height="24">
-              <path fill="currentColor" d="M8 5v14l11-7z" />
-            </svg>
-            <svg v-else viewBox="0 0 24 24" width="24" height="24">
-              <path fill="currentColor"
-                d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
-            </svg>
+
+          <!-- 目录项 -->
+          <div v-if="result.IsDirectory" class="file-card directory">
+            <div class="file-icon">
+              <svg viewBox="0 0 24 24" width="24" height="24">
+                <path fill="currentColor"
+                  d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+              </svg>
+            </div>
+            <div class="file-details">
+              <div class="file-name">{{ result.name }}</div>
+              <div class="file-path">{{ result.path || '/' }}</div>
+            </div>
           </div>
-          <div class="result-info">
-            <div class="result-name">{{ result.name || result.video_title }}</div>
-            <div class="result-path" v-if="result.path">{{ result.path }}</div>
-            <div class="result-meta" v-if="result.type === 'video'">
-              <span v-if="result.duration">{{ result.duration }}</span>
-              <span v-if="result.views">{{ result.views }} 次观看</span>
-              <span v-if="result.author">作者: {{ result.author }}</span>
+
+          <!-- 视频元数据项 -->
+          <div v-else-if="result.type === 'video'" class="file-card video">
+            <div class="thumbnail-container">
+              <!-- 使用视频封面 -->
+              <img v-if="result.thumbnail_url" :src="result.thumbnail_url" class="thumbnail" :alt="result.video_title"
+                loading="lazy" />
+              <div v-else class="thumbnail placeholder">
+                <svg viewBox="0 0 24 24" width="36" height="36">
+                  <path fill="currentColor" d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+              <div v-if="result.duration" class="duration-badge">{{ result.duration }}</div>
+            </div>
+            <div class="file-details">
+              <div class="file-name">{{ result.video_title }}</div>
+              <div class="file-meta">
+                <span v-if="result.author" class="author">{{ result.author }}</span>
+                <span v-if="result.video_views" class="views">{{ result.video_views }} 次观看</span>
+                <span v-if="result.upload_date" class="date">{{ formatDate(result.upload_date) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 文件项 -->
+          <div v-else class="file-card">
+            <div class="thumbnail-container">
+              <img v-if="result.thumbnailUrl" :src="result.thumbnailUrl" class="thumbnail" :alt="result.name"
+                loading="lazy" />
+              <div v-else class="thumbnail placeholder">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                  <path fill="currentColor"
+                    d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z" />
+                </svg>
+              </div>
+              <div v-if="result.duration" class="duration-badge">{{ result.duration }}</div>
+            </div>
+            <div class="file-details">
+              <div class="file-name">{{ result.name }}</div>
+              <div class="file-meta">
+                <span v-if="result.author" class="author">{{ result.author }}</span>
+                <span v-if="result.views" class="views">{{ result.views }} 次观看</span>
+                <span v-if="result.Size" class="size">{{ formatSize(result.Size) }}</span>
+                <span v-if="result.LastModified" class="date">{{ formatDate(result.LastModified) }}</span>
+              </div>
             </div>
           </div>
         </div>

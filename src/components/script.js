@@ -181,14 +181,12 @@ export default {
                         (file.author && file.author.toLowerCase().includes(query));
                 });
 
-                // 格式化结果
+                // 格式化结果，保留原始属性
                 const formattedResults = matchedFiles.map(file => {
-                    const fileName = file.Key.split('/').pop();
                     return {
                         ...file,
-                        name: fileName,
                         path: path || '/',
-                        type: file.IsDirectory ? 'directory' : this.getFileType(fileName)
+                        type: file.IsDirectory ? 'directory' : this.getFileType(file.Key.split('/').pop())
                     };
                 });
 
@@ -215,12 +213,10 @@ export default {
                                 });
 
                                 const newFormattedResults = newFiles.map(file => {
-                                    const fileName = file.Key.split('/').pop();
                                     return {
                                         ...file,
-                                        name: fileName,
                                         path: pathToLoad || '/',
-                                        type: file.IsDirectory ? 'directory' : this.getFileType(fileName)
+                                        type: file.IsDirectory ? 'directory' : this.getFileType(file.Key.split('/').pop())
                                     };
                                 });
 
@@ -237,6 +233,35 @@ export default {
             return results.slice(0, 50);
         },
 
+        /** 搜索视频元数据 */
+        searchVideoMetadata(query) {
+            if (!query || query.length < 2) {
+                return [];
+            }
+            
+            query = query.toLowerCase();
+            
+            // 从缓存的元数据中搜索
+            return this.videoMetadata.filter(video => {
+                const title = (video.video_title || '').toLowerCase();
+                const author = (video.author || '').toLowerCase();
+                return title.includes(query) || author.includes(query);
+            }).map(video => {
+                // 构建缩略图URL
+                const imgCdn = process.env.VUE_APP_IMG_CDN || '';
+                const ghOwner = process.env.VUE_APP_GH_OWNER || '';
+                const ghRepo = process.env.VUE_APP_GH_REPO || '';
+                const thumbnailUrl = `${imgCdn}/${ghOwner}/${ghRepo}/${encodeURIComponent(video.author || '')}/${encodeURIComponent(video.video_title || '')}.jpg`;
+                
+                return {
+                    ...video,
+                    type: 'video',
+                    name: video.video_title,
+                    thumbnail_url: thumbnailUrl
+                };
+            });
+        },
+        
         /** 查找可能包含搜索词的路径 */
         findPotentialPathsToLoad(query) {
             // 这里可以添加一些启发式方法来猜测可能包含搜索词的路径
@@ -788,26 +813,6 @@ export default {
             } catch (error) {
                 console.error('加载视频元数据失败:', error);
             }
-        },
-
-        /** 搜索视频元数据 */
-        searchVideoMetadata(query) {
-            if (!query || query.length < 2) {
-                return [];
-            }
-            
-            query = query.toLowerCase();
-            
-            // 从缓存的元数据中搜索
-            return this.videoMetadata.filter(video => {
-                const title = (video.video_title || '').toLowerCase();
-                const author = (video.author || '').toLowerCase();
-                return title.includes(query) || author.includes(query);
-            }).map(video => ({
-                ...video,
-                type: 'video',
-                name: video.video_title
-            }));
         },
         
         /** 检查是否是作者目录 */
