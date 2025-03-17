@@ -73,8 +73,11 @@ async def lifespan(app: FastAPI):
     yield
 
 
-# 初始化 FastAPI 应用
+# 初始化 FastAPI 应用，添加路由前缀
 app = FastAPI(lifespan=lifespan)
+
+# 创建一个带有前缀的路由器
+api_router = FastAPI()
 
 # 添加 CORS 中间件，允许所有来源的请求
 app.add_middleware(
@@ -86,7 +89,7 @@ app.add_middleware(
 )
 
 
-@app.get("/xovideos")
+@api_router.get("/xovideos")  # 保持原有路径
 @cache(expire=7200)
 async def get_videos(author: str = Query(None)):
     try:
@@ -125,10 +128,19 @@ async def get_videos(author: str = Query(None)):
         return {"status": "error", "message": error_msg}
 
 
-@app.get("/health")
+@api_router.get("/health")  # 保持原有路径
 async def health_check():
     logger.info("健康检查请求")
     return {"status": "healthy"}
+
+
+# 将 API 路由器挂载到主应用，添加前缀
+app.mount("/api", api_router)
+
+# 添加根路由，用于测试 API 是否正常工作
+@app.get("/")
+async def root():
+    return {"message": "API 服务正常运行"}
 
 
 if __name__ == "__main__":
