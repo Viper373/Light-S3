@@ -9,13 +9,6 @@
       }
     },
     {
-      "src": "docs/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "docs/.vitepress/dist"
-      }
-    },
-    {
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
@@ -27,10 +20,6 @@
     {
       "src": "/api/(.*)",
       "dest": "api.py"
-    },
-    {
-      "src": "/docs/(.*)",
-      "dest": "/docs/.vitepress/dist/index.html"
     },
     {
       "src": "/(.*)",
