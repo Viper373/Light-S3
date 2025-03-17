@@ -238,9 +238,9 @@ export default {
             if (!query || query.length < 2) {
                 return [];
             }
-            
+
             query = query.toLowerCase();
-            
+
             // 从缓存的元数据中搜索
             return this.videoMetadata.filter(video => {
                 const title = (video.video_title || '').toLowerCase();
@@ -252,7 +252,7 @@ export default {
                 const ghOwner = process.env.VUE_APP_GH_OWNER || '';
                 const ghRepo = process.env.VUE_APP_GH_REPO || '';
                 const thumbnailUrl = `${imgCdn}/${ghOwner}/${ghRepo}/${encodeURIComponent(video.author || '')}/${encodeURIComponent(video.video_title || '')}.jpg`;
-                
+
                 return {
                     ...video,
                     type: 'video',
@@ -261,7 +261,7 @@ export default {
                 };
             });
         },
-        
+
         /** 查找可能包含搜索词的路径 */
         findPotentialPathsToLoad(query) {
             // 这里可以添加一些启发式方法来猜测可能包含搜索词的路径
@@ -391,80 +391,135 @@ export default {
                 // 获取视频标题和作者
                 const videoTitle = videoMetadata.video_title || '';
                 const author = videoMetadata.author || '';
-                
+
                 console.log(`尝试查找视频: "${videoTitle}" by ${author}`);
-                
+
                 let videoFile = null;
-                
+
                 // 1. 首先尝试在作者目录中查找
                 if (author) {
-                    const authorPath = `XOVideos/${author}/`;
-                    
+                    // 尝试多个可能的作者目录路径
+
                     // 如果作者目录未缓存，尝试加载
-                    if (!this.directoryCache[authorPath]) {
+                    if (!this.directoryCache[author]) {
                         try {
-                            await this.loadDirectoryContent(authorPath);
+                            console.log(`尝试加载作者目录: ${author}`);
+                            await this.loadDirectoryContent(author);
                         } catch (error) {
-                            console.log(`作者目录 ${authorPath} 不存在或无法访问`);
+                            console.log(`作者目录 ${author} 不存在或无法访问`);
                         }
                     }
-                    
+
                     // 在作者目录中查找
-                    if (this.directoryCache[authorPath]) {
-                        const authorFiles = this.directoryCache[authorPath];
+                    if (this.directoryCache[author]) {
+                        const authorFiles = this.directoryCache[author];
                         // 使用更宽松的匹配逻辑
                         videoFile = this.findBestMatchingVideo(authorFiles, videoTitle);
-                    }
-                }
-                
-                // 2. 如果在作者目录中没找到，尝试在所有已缓存的目录中查找
-                if (!videoFile) {
-                    console.log(`在作者目录中未找到视频，尝试在所有缓存目录中查找`);
-                    
-                    for (const [path, files] of Object.entries(this.directoryCache)) {
-                        const found = this.findBestMatchingVideo(files, videoTitle);
-                        if (found) {
-                            videoFile = found;
-                            console.log(`在目录 ${path} 中找到匹配视频`);
-                            break;
-                        }
-                    }
-                }
-                
-                // 3. 如果仍然没找到，尝试加载更多目录
-                if (!videoFile) {
-                    console.log(`在已缓存目录中未找到视频，尝试加载更多目录`);
-                    
-                    // 尝试加载一些常见目录
-                    const commonDirs = [
-                        'videos/',
-                        'pornhub/',
-                        'SLRabbit/'
-                    ];
-                    
-                    for (const dir of commonDirs) {
-                        if (!this.directoryCache[dir]) {
-                            try {
-                                await this.loadDirectoryContent(dir);
-                                
-                                // 在新加载的目录中查找
-                                if (this.directoryCache[dir]) {
-                                    const found = this.findBestMatchingVideo(this.directoryCache[dir], videoTitle);
-                                    if (found) {
-                                        videoFile = found;
-                                        console.log(`在新加载的目录 ${dir} 中找到匹配视频`);
-                                        break;
-                                    }
-                                }
-                            } catch (error) {
-                                console.log(`目录 ${dir} 不存在或无法访问`);
-                            }
+                        if (videoFile) {
+                            console.log(`在目录 ${author} 中找到匹配视频: ${videoFile.Key}`);
                         }
                     }
                 }
 
-                // 如果找到了视频文件，播放它
+
+                // 2. 如果在作者目录中没找到，尝试在所有已缓存的目录中查找
+                if (!videoFile) {
+                    console.log(`在作者目录中未找到视频，尝试在所有缓存目录中查找`);
+
+                    for (const [path, files] of Object.entries(this.directoryCache)) {
+                        const found = this.findBestMatchingVideo(files, videoTitle);
+                        if (found) {
+                            videoFile = found;
+                            console.log(`在目录 ${path} 中找到匹配视频: ${found.Key}`);
+                            break;
+                        }
+                    }
+                }
+
+                // 3. 如果仍然没找到，尝试加载更多目录
+                if (!videoFile) {
+                    console.log(`在已缓存目录中未找到视频，尝试加载更多目录`);
+
+                    if (!this.directoryCache[author]) {
+                        try {
+                            console.log(`尝试加载目录: ${author}`);
+                            await this.loadDirectoryContent(author);
+
+                            // 在新加载的目录中查找
+                            if (this.directoryCache[author]) {
+                                const found = this.findBestMatchingVideo(this.directoryCache[author], videoTitle);
+                                if (found) {
+                                    videoFile = found;
+                                    console.log(`在新加载的目录 ${author} 中找到匹配视频: ${found.Key}`);
+                                }
+                            }
+                        } catch (error) {
+                            console.log(`目录 ${author} 不存在或无法访问`);
+                        }
+                    } else {
+                        // 目录已缓存，再次检查
+                        const found = this.findBestMatchingVideo(this.directoryCache[author], videoTitle);
+                        if (found) {
+                            videoFile = found;
+                            console.log(`在已缓存目录 ${author} 中找到匹配视频: ${found.Key}`);
+                        }
+                    }
+                }
+
+
+                // 4. 如果仍然没找到，尝试递归搜索子目录
+                if (!videoFile) {
+                    console.log(`在常见目录中未找到视频，尝试递归搜索子目录`);
+
+                    // 获取所有已缓存的目录
+                    const cachedDirs = Object.keys(this.directoryCache)
+                        .filter(path => path.endsWith('/'));
+
+                    // 遍历每个目录，查找子目录
+                    for (const dir of cachedDirs) {
+                        if (this.directoryCache[dir]) {
+                            const subDirs = this.directoryCache[dir]
+                                .filter(item => item.IsDirectory)
+                                .map(item => item.Key);
+
+                            // 加载并搜索每个子目录
+                            for (const subDir of subDirs) {
+                                if (!this.directoryCache[subDir]) {
+                                    try {
+                                        console.log(`尝试加载子目录: ${subDir}`);
+                                        await this.loadDirectoryContent(subDir);
+
+                                        if (this.directoryCache[subDir]) {
+                                            const found = this.findBestMatchingVideo(this.directoryCache[subDir], videoTitle);
+                                            if (found) {
+                                                videoFile = found;
+                                                console.log(`在子目录 ${subDir} 中找到匹配视频: ${found.Key}`);
+                                                break;
+                                            }
+                                        }
+                                    } catch (error) {
+                                        console.log(`子目录 ${subDir} 不存在或无法访问`);
+                                    }
+                                }
+                            }
+
+                            if (videoFile) break;
+                        }
+                    }
+                }
+
+                // 如果找到了视频文件，确保它有正确的 videoUrl
                 if (videoFile) {
+                    // 确保视频文件有 videoUrl
+                    if (!videoFile.videoUrl) {
+                        // 构建视频URL
+                        const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || '';
+                        const s3Domain = process.env.VUE_APP_S3_DOMAIN || '';
+                        const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                        videoFile.videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + '/' + encodeURIComponent(videoFile.Key);
+                        console.log(`为视频构建URL: ${videoFile.videoUrl}`);
+                    }
+
                     this.handleFileClick(videoFile);
                     this.clearSearch();
                 } else {
@@ -476,65 +531,94 @@ export default {
                 console.error('搜索视频文件失败:', error);
             }
         },
-        
+
         /** 查找最佳匹配的视频文件 */
         findBestMatchingVideo(files, videoTitle) {
             if (!files || !videoTitle) return null;
-            
+
             // 过滤出视频文件
             const videoFiles = files.filter(file => {
                 const fileName = file.Key.split('/').pop();
                 return !file.IsDirectory && this.getFileType(fileName) === 'video';
             });
-            
+
             if (videoFiles.length === 0) return null;
-            
+
             // 准备用于匹配的标题
             const normalizedTitle = videoTitle.toLowerCase()
                 .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "") // 移除标点符号
-                .replace(/\s+/g, " "); // 规范化空格
-            
+                .replace(/\s+/g, " ") // 规范化空格
+                .trim();
+
+            console.log(`规范化后的标题: "${normalizedTitle}"`);
+
             // 1. 尝试精确匹配
             let match = videoFiles.find(file => {
                 const fileName = file.Key.split('/').pop().toLowerCase();
-                return fileName.includes(normalizedTitle);
+                const normalizedFileName = fileName
+                    .replace(/\.[^.]+$/, '') // 移除扩展名
+                    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "") // 移除标点符号
+                    .replace(/\s+/g, " ") // 规范化空格
+                    .trim();
+
+                return normalizedFileName.includes(normalizedTitle) || normalizedTitle.includes(normalizedFileName);
             });
-            
+
+            if (match) {
+                console.log(`找到精确匹配: ${match.Key}`);
+                return match;
+            }
+
             // 2. 如果没有精确匹配，尝试关键词匹配
-            if (!match) {
-                // 提取标题中的关键词（长度大于2的词）
-                const keywords = normalizedTitle.split(' ').filter(word => word.length > 2);
-                
-                if (keywords.length > 0) {
-                    // 查找包含最多关键词的文件
-                    let bestMatchCount = 0;
-                    let bestMatch = null;
-                    
-                    for (const file of videoFiles) {
-                        const fileName = file.Key.split('/').pop().toLowerCase();
-                        let matchCount = 0;
-                        
-                        for (const keyword of keywords) {
-                            if (fileName.includes(keyword)) {
-                                matchCount++;
-                            }
-                        }
-                        
-                        if (matchCount > bestMatchCount) {
-                            bestMatchCount = matchCount;
-                            bestMatch = file;
+            // 提取标题中的关键词（长度大于2的词）
+            const keywords = normalizedTitle.split(' ').filter(word => word.length > 2);
+
+            if (keywords.length > 0) {
+                console.log(`提取的关键词: ${keywords.join(', ')}`);
+
+                // 查找包含最多关键词的文件
+                let bestMatchCount = 0;
+                let bestMatch = null;
+
+                for (const file of videoFiles) {
+                    const fileName = file.Key.split('/').pop().toLowerCase();
+                    const normalizedFileName = fileName
+                        .replace(/\.[^.]+$/, '') // 移除扩展名
+                        .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "") // 移除标点符号
+                        .replace(/\s+/g, " ") // 规范化空格
+                        .trim();
+
+                    let matchCount = 0;
+                    let matchedKeywords = [];
+
+                    for (const keyword of keywords) {
+                        if (normalizedFileName.includes(keyword)) {
+                            matchCount++;
+                            matchedKeywords.push(keyword);
                         }
                     }
-                    
-                    // 如果至少匹配了一个关键词，就认为是匹配的
-                    if (bestMatchCount > 0) {
-                        match = bestMatch;
-                        console.log(`通过关键词匹配找到视频，匹配了 ${bestMatchCount} 个关键词`);
+
+                    if (matchCount > bestMatchCount) {
+                        bestMatchCount = matchCount;
+                        bestMatch = file;
+                        console.log(`新的最佳匹配: ${file.Key}，匹配了 ${matchCount} 个关键词: ${matchedKeywords.join(', ')}`);
                     }
                 }
+
+                // 如果至少匹配了一个关键词，就认为是匹配的
+                if (bestMatchCount > 0) {
+                    console.log(`最终关键词匹配: ${bestMatch.Key}，匹配了 ${bestMatchCount} 个关键词`);
+                    return bestMatch;
+                }
             }
-            
-            return match;
+
+            // 3. 如果关键词匹配也失败，尝试模糊匹配（取第一个视频文件）
+            if (videoFiles.length > 0) {
+                console.log(`没有找到关键词匹配，使用模糊匹配: ${videoFiles[0].Key}`);
+                return videoFiles[0];
+            }
+
+            return null;
         },
 
         /** 获取文件类型 */
@@ -788,16 +872,16 @@ export default {
                 // 不带author参数请求所有视频元数据
                 const apiUrl = '/api/xovideos';
                 const response = await fetch(apiUrl);
-                
+
                 if (!response.ok) {
                     throw new Error(`API请求失败: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
-                
+
                 if (data.status === 'success' && Array.isArray(data.data)) {
                     this.videoMetadata = data.data;
-                    
+
                     // 按作者分组
                     this.videoMetadataByAuthor = {};
                     for (const video of data.data) {
@@ -814,12 +898,12 @@ export default {
                 console.error('加载视频元数据失败:', error);
             }
         },
-        
+
         /** 检查是否是作者目录 */
         isAuthorDirectory(dirName) {
             return this.videoMetadataByAuthor[dirName] !== undefined;
         },
-        
+
         /** 预加载作者视频元数据 */
         preloadAuthorVideos(author) {
             // 如果已经有缓存，不需要重新加载
@@ -827,23 +911,23 @@ export default {
                 console.log(`使用缓存的 ${author} 视频元数据，共 ${this.videoMetadataByAuthor[author].length} 条`);
                 return;
             }
-            
+
             // 否则从API加载
             this.loadAuthorVideos(author);
         },
-        
+
         /** 从API加载作者视频 */
         async loadAuthorVideos(author) {
             try {
                 const apiUrl = `/api/xovideos?author=${encodeURIComponent(author)}`;
                 const response = await fetch(apiUrl);
-                
+
                 if (!response.ok) {
                     throw new Error(`API请求失败: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
-                
+
                 if (data.status === 'success' && Array.isArray(data.data)) {
                     // 更新缓存
                     this.videoMetadataByAuthor[author] = data.data;
@@ -929,55 +1013,55 @@ export default {
             this.updateHistory(newPath);
             this.currentPath = newPath;
         },
-            /** 加载更多目录用于搜索 */
-    async loadMoreForSearch() {
-        this.searchLoading = true;
+        /** 加载更多目录用于搜索 */
+        async loadMoreForSearch() {
+            this.searchLoading = true;
 
-        try {
-            // 尝试加载一些常见目录
-            const commonDirs = [
-                'XOVideos/',
-                'videos/',
-                'pornhub/',
-                'SLRabbit/'
-            ];
+            try {
+                // 尝试加载一些常见目录
+                const commonDirs = [
+                    'XOVideos/',
+                    'videos/',
+                    'pornhub/',
+                    'SLRabbit/'
+                ];
 
-            for (const dir of commonDirs) {
-                if (!this.directoryCache[dir]) {
-                    await this.loadDirectoryContent(dir);
+                for (const dir of commonDirs) {
+                    if (!this.directoryCache[dir]) {
+                        await this.loadDirectoryContent(dir);
+                    }
                 }
+
+                // 重新执行搜索
+                await this.performSearch();
+            } catch (error) {
+                console.error('加载更多目录失败:', error);
+            } finally {
+                this.searchLoading = false;
+            }
+        },
+
+        /** 高亮显示匹配原因（用于调试） */
+        highlightMatch(result, query) {
+            // 检查文件名匹配
+            const fileName = (result.name || result.video_title || '').toLowerCase();
+            if (fileName.includes(query.toLowerCase())) {
+                return `文件名包含 "${query}"`;
             }
 
-            // 重新执行搜索
-            await this.performSearch();
-        } catch (error) {
-            console.error('加载更多目录失败:', error);
-        } finally {
-            this.searchLoading = false;
-        }
-    },
+            // 检查路径匹配
+            const fullPath = (result.Key || '').toLowerCase();
+            if (fullPath.includes(query.toLowerCase())) {
+                return `路径包含 "${query}"`;
+            }
 
-    /** 高亮显示匹配原因（用于调试） */
-    highlightMatch(result, query) {
-        // 检查文件名匹配
-        const fileName = (result.name || result.video_title || '').toLowerCase();
-        if (fileName.includes(query.toLowerCase())) {
-            return `文件名包含 "${query}"`;
-        }
+            // 检查作者匹配
+            const author = (result.author || '').toLowerCase();
+            if (author.includes(query.toLowerCase())) {
+                return `作者包含 "${query}"`;
+            }
 
-        // 检查路径匹配
-        const fullPath = (result.Key || '').toLowerCase();
-        if (fullPath.includes(query.toLowerCase())) {
-            return `路径包含 "${query}"`;
-        }
-
-        // 检查作者匹配
-        const author = (result.author || '').toLowerCase();
-        if (author.includes(query.toLowerCase())) {
-            return `作者包含 "${query}"`;
-        }
-
-        return '未知匹配原因';
-    },
+            return '未知匹配原因';
+        },
     },
 };

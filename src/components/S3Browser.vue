@@ -86,15 +86,15 @@
       <!-- 使用与文件列表相同的网格布局 -->
       <div class="file-grid">
         <!-- 搜索结果项 -->
-        <div v-for="result in searchResults" :key="result.Key || result.id" class="file-item"
-          @click="handleSearchResultClick(result)">
-
+        <div v-for="result in searchResults" :key="result.Key || result.id" 
+             class="file-item" 
+             @click="handleSearchResultClick(result)">
+          
           <!-- 目录项 -->
           <div v-if="result.IsDirectory" class="file-card directory">
             <div class="file-icon">
               <svg viewBox="0 0 24 24" width="24" height="24">
-                <path fill="currentColor"
-                  d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                <path fill="currentColor" d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
               </svg>
             </div>
             <div class="file-details">
@@ -102,13 +102,13 @@
               <div class="file-path">{{ result.path || '/' }}</div>
             </div>
           </div>
-
+          
           <!-- 视频元数据项 -->
           <div v-else-if="result.type === 'video'" class="file-card video">
             <div class="thumbnail-container">
               <!-- 使用视频封面 -->
-              <img v-if="result.thumbnail_url" :src="result.thumbnail_url" class="thumbnail" :alt="result.video_title"
-                loading="lazy" />
+              <img v-if="result.thumbnail_url" :src="result.thumbnail_url" class="thumbnail" 
+                   :alt="result.video_title" loading="lazy" />
               <div v-else class="thumbnail placeholder">
                 <svg viewBox="0 0 24 24" width="36" height="36">
                   <path fill="currentColor" d="M8 5v14l11-7z" />
@@ -125,16 +125,15 @@
               </div>
             </div>
           </div>
-
+          
           <!-- 文件项 -->
           <div v-else class="file-card">
             <div class="thumbnail-container">
-              <img v-if="result.thumbnailUrl" :src="result.thumbnailUrl" class="thumbnail" :alt="result.name"
-                loading="lazy" />
+              <img v-if="result.thumbnailUrl" :src="result.thumbnailUrl" class="thumbnail" 
+                   :alt="result.name" loading="lazy" />
               <div v-else class="thumbnail placeholder">
                 <svg viewBox="0 0 24 24" width="24" height="24">
-                  <path fill="currentColor"
-                    d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z" />
+                  <path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z" />
                 </svg>
               </div>
               <div v-if="result.duration" class="duration-badge">{{ result.duration }}</div>

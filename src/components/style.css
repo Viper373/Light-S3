@@ -170,6 +170,7 @@ body {
     background-color: #fff;
     color: #333;
 }
+
 .search-input::placeholder {
     font-family: 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif;
 }
@@ -300,6 +301,7 @@ body {
     background-color: var(--primary-color);
     color: white;
 }
+
 .search-results-header h2 {
     margin: 0;
     font-size: 1.25rem;
@@ -391,7 +393,8 @@ body {
 
 .search-results .file-card.video .thumbnail-container {
     position: relative;
-    padding-top: 56.25%; /* 16:9 宽高比 */
+    padding-top: 56.25%;
+    /* 16:9 宽高比 */
     background-color: var(--placeholder-bg);
     overflow: hidden;
 }
@@ -492,6 +495,11 @@ body {
 .search-results .file-meta .date::before {
     content: '📅';
     margin-right: 0.25rem;
+}
+
+/* 确保搜索结果中的文件卡片与正常浏览中的文件卡片样式一致 */
+.search-results .file-item {
+    height: 100%;
 }
 
 .result-icon {
