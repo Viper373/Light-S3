@@ -312,6 +312,84 @@ async def root():
     return {"message": "API 服务正常运行"}
 
 
+# 在现有路由下方添加搜索路由
+@api_router.get("/xovideos/search")
+@cache(expire=3600)
+async def search_videos(q: str = Query(...)):
+    try:
+        logger.info(f"收到搜索请求: q={q}, 当前元数据条目数: {len(video_metadata)}")
+        
+        if not q.strip():
+            return {"status": "error", "message": "搜索关键词不能为空"}
+        
+        search_query = q.lower().strip()
+        
+        # 如果元数据为空，尝试直接从数据库搜索
+        if not video_metadata:
+            logger.warning("元数据为空，尝试直接从数据库搜索")
+            
+            if collection is not None:
+                try:
+                    # 构建MongoDB搜索查询
+                    query = {
+                        "$or": [
+                            {"作者名称": {"$regex": search_query, "$options": "i"}},
+                            {"作者视频列表.视频标题": {"$regex": search_query, "$options": "i"}}
+                        ]
+                    }
+                    
+                    # 直接从数据库查询
+                    docs = list(collection.find(query, {"_id": 0, "作者名称": 1, "作者视频列表": 1}))
+                    logger.info(f"搜索查询返回 {len(docs)} 条文档")
+                    
+                    result_data = []
+                    for doc in docs:
+                        current_author = doc.get("作者名称", "未知作者")
+                        if current_author == "":
+                            current_author = "未知作者"
+                            
+                        videos = doc.get("作者视频列表", [])
+                        for video in videos:
+                            title = video.get("视频标题", "")
+                            if title and (search_query in title.lower() or search_query in current_author.lower()):
+                                result_data.append({
+                                    "author": current_author,
+                                    "video_title": title,
+                                    "video_views": video.get("视频观看次数", "0"),
+                                    "duration": video.get("视频时长", "0:00")
+                                })
+                    
+                    if result_data:
+                        logger.info(f"搜索返回 {len(result_data)} 条视频数据")
+                        return {"status": "success", "data": result_data}
+                except Exception as db_error:
+                    logger.error(f"搜索数据库失败: {str(db_error)}")
+            
+            # 如果直接查询也失败，返回空结果
+            return {"status": "success", "data": []}
+        
+        # 在元数据中搜索
+        search_results = []
+        for key, value in video_metadata.items():
+            parts = key.split("/", 1)
+            if len(parts) == 2:
+                author, title = parts
+                if search_query in author.lower() or search_query in title.lower():
+                    search_results.append({
+                        "author": author,
+                        "video_title": title,
+                        "video_views": value.get("views"),
+                        "duration": value.get("duration")
+                    })
+        
+        logger.info(f"搜索返回 {len(search_results)} 条结果")
+        return {"status": "success", "data": search_results}
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"处理搜索请求时出错: {error_msg}")
+        return {"status": "error", "message": error_msg}
+
+
 if __name__ == "__main__":
     import uvicorn
 

@@ -15,14 +15,6 @@
   ],
   "routes": [
     {
-      "src": "/api/xovideos(.*)",
-      "dest": "api.py"
-    },
-    {
-      "src": "/api/health",
-      "dest": "api.py"
-    },
-    {
       "src": "/api/(.*)",
       "dest": "api.py"
     },

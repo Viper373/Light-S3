@@ -1,4 +1,4 @@
-import {S3Client, ListObjectsV2Command} from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 // 添加API请求缓存
 const apiCache = {};
@@ -42,6 +42,15 @@ export default {
             directoryCache: {},
             videoPlayerVisible: false,
             currentVideo: null,
+            searchQuery: '',
+            searchResults: [],
+            searchLoading: false,
+            searchTimeout: null,
+            searchCache: {},
+            isSearchActive: false,
+            videoMetadata: [], // 存储所有视频元数据
+            videoMetadataByAuthor: {}, // 按作者分组的视频元数据
+            isDevelopment: process.env.NODE_ENV === 'development',
         };
     },
 
@@ -90,6 +99,328 @@ export default {
                 },
                 forcePathStyle: true,
             });
+        },
+
+        /** 处理搜索输入 */
+        handleSearchInput() {
+            // 清除之前的定时器
+            if (this.searchTimeout) {
+                clearTimeout(this.searchTimeout);
+            }
+
+            // 如果搜索框为空，清除搜索结果
+            if (!this.searchQuery.trim()) {
+                this.clearSearch();
+                return;
+            }
+
+            // 设置定时器，防止频繁搜索
+            this.searchTimeout = setTimeout(() => {
+                this.performSearch();
+            }, 300);
+        },
+
+        /** 执行搜索 */
+        async performSearch() {
+            const query = this.searchQuery.trim().toLowerCase();
+            if (!query) {
+                this.clearSearch();
+                return;
+            }
+
+            // 检查缓存
+            if (this.searchCache[query]) {
+                this.searchResults = this.searchCache[query];
+                this.isSearchActive = true;
+                return;
+            }
+
+            this.searchLoading = true;
+            this.isSearchActive = true;
+
+            try {
+                // 并行执行两种搜索
+                const [s3Results, metadataResults] = await Promise.all([
+                    this.searchS3Files(query),
+                    this.searchVideoMetadata(query)
+                ]);
+
+                // 合并结果
+                this.searchResults = [...s3Results, ...metadataResults];
+
+                // 缓存结果
+                this.searchCache[query] = this.searchResults;
+            } catch (error) {
+                console.error('搜索出错:', error);
+                this.error = `搜索失败: ${error.message}`;
+            } finally {
+                this.searchLoading = false;
+            }
+        },
+        /** 搜索 S3 文件 */
+        async searchS3Files(query) {
+            // 如果目录缓存为空，先加载根目录
+            if (Object.keys(this.directoryCache).length === 0) {
+                await this.loadFileList();
+            }
+
+            // 从缓存的目录中搜索
+            let results = [];
+
+            // 遍历所有缓存的目录
+            for (const [path, files] of Object.entries(this.directoryCache)) {
+                // 过滤匹配的文件和目录
+                const matchedFiles = files.filter(file => {
+                    // 获取文件名和完整路径
+                    const fileName = file.Key.split('/').pop().toLowerCase();
+                    const fullPath = file.Key.toLowerCase();
+
+                    // 检查文件名、路径和其他属性是否包含搜索词
+                    return fileName.includes(query) ||
+                        fullPath.includes(query) ||
+                        (file.author && file.author.toLowerCase().includes(query));
+                });
+
+                // 格式化结果
+                const formattedResults = matchedFiles.map(file => {
+                    const fileName = file.Key.split('/').pop();
+                    return {
+                        ...file,
+                        name: fileName,
+                        path: path || '/',
+                        type: file.IsDirectory ? 'directory' : this.getFileType(fileName)
+                    };
+                });
+
+                results = [...results, ...formattedResults];
+            }
+
+            // 如果结果少于10个，尝试从S3加载更多目录
+            if (results.length < 10) {
+                try {
+                    // 尝试加载更多目录
+                    const pathsToLoad = this.findPotentialPathsToLoad(query);
+                    for (const pathToLoad of pathsToLoad) {
+                        if (!this.directoryCache[pathToLoad]) {
+                            await this.loadDirectoryContent(pathToLoad);
+
+                            // 在新加载的目录中搜索
+                            if (this.directoryCache[pathToLoad]) {
+                                const newFiles = this.directoryCache[pathToLoad].filter(file => {
+                                    const fileName = file.Key.split('/').pop().toLowerCase();
+                                    const fullPath = file.Key.toLowerCase();
+                                    return fileName.includes(query) ||
+                                        fullPath.includes(query) ||
+                                        (file.author && file.author.toLowerCase().includes(query));
+                                });
+
+                                const newFormattedResults = newFiles.map(file => {
+                                    const fileName = file.Key.split('/').pop();
+                                    return {
+                                        ...file,
+                                        name: fileName,
+                                        path: pathToLoad || '/',
+                                        type: file.IsDirectory ? 'directory' : this.getFileType(fileName)
+                                    };
+                                });
+
+                                results = [...results, ...newFormattedResults];
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('加载更多目录失败:', error);
+                }
+            }
+
+            // 限制结果数量
+            return results.slice(0, 50);
+        },
+
+        /** 查找可能包含搜索词的路径 */
+        findPotentialPathsToLoad(query) {
+            // 这里可以添加一些启发式方法来猜测可能包含搜索词的路径
+            // 例如，如果搜索词是"JK"，可能需要加载 "/XOVideos/" 目录
+            const potentialPaths = [];
+
+            // 添加一些常见目录
+            potentialPaths.push('');  // 根目录
+            potentialPaths.push('XOVideos/');
+            potentialPaths.push('videos/');
+            potentialPaths.push('pornhub/');
+
+            // 如果搜索词可能是作者名，尝试加载对应的作者目录
+            if (query.length > 1) {
+                potentialPaths.push(`XOVideos/${query}/`);
+                potentialPaths.push(`videos/${query}/`);
+            }
+
+            return potentialPaths;
+        },
+
+        /** 加载指定目录内容 */
+        async loadDirectoryContent(path) {
+            try {
+                // 获取 S3 文件列表
+                const command = new ListObjectsV2Command({
+                    Bucket: process.env.VUE_APP_S3_BUCKET,
+                    Prefix: path,
+                    Delimiter: '/',
+                });
+                const s3Response = await this.s3Client.send(command);
+
+                // 处理目录
+                const dirs = (s3Response.CommonPrefixes || []).map((prefix) => {
+                    const parts = prefix.Prefix.split('/').filter((p) => p);
+                    return {
+                        Key: prefix.Prefix,
+                        IsDirectory: true,
+                        name: parts[parts.length - 1] || '',
+                    };
+                });
+
+                // 处理文件
+                const files = (s3Response.Contents || [])
+                    .filter((file) => !file.Key.endsWith('/'))
+                    .map((file) => {
+                        const parts = file.Key.split('/').filter((p) => p);
+                        const fileName = parts.pop() || '';
+                        const name = fileName.replace(/\.[^.]+$/, ''); // 移除扩展名
+                        const author = parts[parts.length - 1]; // 作者是最后一个目录名
+
+                        return {
+                            Key: file.Key,
+                            IsDirectory: false,
+                            name,
+                            author,
+                            Size: file.Size,
+                            LastModified: file.LastModified?.toISOString(),
+                        };
+                    });
+
+                // 缓存结果
+                this.directoryCache[path] = [...dirs, ...files];
+
+                return this.directoryCache[path];
+            } catch (error) {
+                console.error(`加载目录 ${path} 失败:`, error);
+                return [];
+            }
+        },
+        /** 本地搜索视频元数据 */
+        async searchLocalVideoMetadata(query) {
+            // 如果没有加载过视频元数据，先加载
+            if (!this.videoMetadata) {
+                try {
+                    const response = await fetch('/api/xovideos');
+                    const data = await response.json();
+
+                    if (data.status === 'success' && Array.isArray(data.data)) {
+                        this.videoMetadata = data.data;
+                    } else {
+                        return [];
+                    }
+                } catch (error) {
+                    console.error('加载视频元数据失败:', error);
+                    return [];
+                }
+            }
+
+            // 在本地元数据中搜索
+            return this.videoMetadata.filter(video => {
+                const title = (video.video_title || '').toLowerCase();
+                const author = (video.author || '').toLowerCase();
+                return title.includes(query) || author.includes(query);
+            }).map(video => ({
+                ...video,
+                type: 'video',
+                name: video.video_title
+            }));
+        },
+        /** 清除搜索 */
+        clearSearch() {
+            this.searchQuery = '';
+            this.searchResults = [];
+            this.isSearchActive = false;
+        },
+
+        /** 处理搜索结果点击 */
+        handleSearchResultClick(result) {
+            if (result.IsDirectory) {
+                // 如果是目录，导航到该目录
+                this.currentPath = result.path + (result.path.endsWith('/') ? '' : '/') + result.name;
+                this.clearSearch();
+            } else if (result.type === 'video') {
+                // 如果是视频元数据，尝试在S3中查找对应的视频
+                this.searchAndPlayVideo(result);
+            } else {
+                // 如果是文件，处理文件点击
+                this.handleFileClick(result);
+                this.clearSearch();
+            }
+        },
+
+        /** 搜索并播放视频 */
+        async searchAndPlayVideo(videoMetadata) {
+            try {
+                // 尝试在当前目录和所有缓存的目录中查找匹配的视频文件
+                const videoTitle = videoMetadata.video_title;
+                const _author = videoMetadata.author; // 添加下划线前缀，表示允许未使用
+
+                let videoFile = null;
+
+                // 首先在当前目录中查找
+                const currentFiles = this.directoryCache[this.currentPath] || [];
+                videoFile = currentFiles.find(file => {
+                    const fileName = file.Key.split('/').pop();
+                    return !file.IsDirectory &&
+                        this.getFileType(fileName) === 'video' &&
+                        fileName.includes(videoTitle);
+                });
+
+                // 如果当前目录没找到，在所有缓存的目录中查找
+                if (!videoFile) {
+                    for (const [_path, files] of Object.entries(this.directoryCache)) { // 添加下划线前缀
+                        const found = files.find(file => {
+                            const fileName = file.Key.split('/').pop();
+                            return !file.IsDirectory &&
+                                this.getFileType(fileName) === 'video' &&
+                                fileName.includes(videoTitle);
+                        });
+
+                        if (found) {
+                            videoFile = found;
+                            break;
+                        }
+                    }
+                }
+
+                // 如果找到了视频文件，播放它
+                if (videoFile) {
+                    this.handleFileClick(videoFile);
+                    this.clearSearch();
+                } else {
+                    // 如果没找到，显示提示
+                    alert(`未找到视频文件: ${videoTitle}`);
+                }
+            } catch (error) {
+                console.error('搜索视频文件失败:', error);
+            }
+        },
+
+        /** 获取文件类型 */
+        getFileType(fileName) {
+            const extension = fileName.split('.').pop().toLowerCase();
+            const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'];
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
+            if (videoExtensions.includes(extension)) {
+                return 'video';
+            } else if (imageExtensions.includes(extension)) {
+                return 'image';
+            } else {
+                return 'file';
+            }
         },
 
         /** 应用深色模式偏好 */
@@ -175,7 +506,7 @@ export default {
                     Delimiter: '/',
                 });
                 const s3Response = await this.s3Client.send(command);
-            
+
                 // 处理目录
                 const dirs = (s3Response.CommonPrefixes || []).map((prefix) => {
                     const parts = prefix.Prefix.split('/').filter((p) => p);
@@ -185,7 +516,7 @@ export default {
                         name: parts[parts.length - 1] || '',
                     };
                 });
-            
+
                 // 处理文件
                 const files = (s3Response.Contents || [])
                     .filter((file) => !file.Key.endsWith('/'))
@@ -241,7 +572,6 @@ export default {
                                 ? ''
                                 : window.location.origin;
                             const apiUrl = `${baseUrl}/api/xovideos?author=${safeAuthor}`;
-                            console.log(`请求API: ${apiUrl}`); // 添加日志
 
                             const response = await fetch(apiUrl, {
                                 method: 'GET',
@@ -270,8 +600,7 @@ export default {
                                 });
                             }
                         } catch (error) {
-                            console.error(`获取作者 ${author} 的元数据失败:`, error);
-                            // 继续处理其他作者，不中断整个流程
+                            console.error(`获取元数据失败: ${author}`, error);
                         }
                     }));
 
@@ -312,7 +641,110 @@ export default {
 
         /** 加载初始数据 */
         async loadInitialData() {
-            await this.loadFileList();
+            try {
+                // 并行加载文件列表和视频元数据
+                await Promise.all([
+                    this.loadFileList(),
+                    this.loadAllVideoMetadata()
+                ]);
+            } catch (error) {
+                console.error('加载初始数据失败:', error);
+                this.error = `加载失败: ${error.message}`;
+            }
+        },
+
+        /** 加载所有视频元数据 */
+        async loadAllVideoMetadata() {
+            try {
+                // 不带author参数请求所有视频元数据
+                const apiUrl = '/api/xovideos';
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === 'success' && Array.isArray(data.data)) {
+                    this.videoMetadata = data.data;
+                    
+                    // 按作者分组
+                    this.videoMetadataByAuthor = {};
+                    for (const video of data.data) {
+                        const author = video.author || '未知作者';
+                        if (!this.videoMetadataByAuthor[author]) {
+                            this.videoMetadataByAuthor[author] = [];
+                        }
+                        this.videoMetadataByAuthor[author].push(video);
+                    }
+                    
+                    console.log(`成功加载 ${data.data.length} 条视频元数据`);
+                } else {
+                    console.error('API返回格式错误:', data);
+                }
+            } catch (error) {
+                console.error('加载视频元数据失败:', error);
+            }
+        },
+
+        /** 搜索视频元数据 */
+        searchVideoMetadata(query) {
+            if (!query || query.length < 2) {
+                return [];
+            }
+            
+            query = query.toLowerCase();
+            
+            // 从缓存的元数据中搜索
+            return this.videoMetadata.filter(video => {
+                const title = (video.video_title || '').toLowerCase();
+                const author = (video.author || '').toLowerCase();
+                return title.includes(query) || author.includes(query);
+            }).map(video => ({
+                ...video,
+                type: 'video',
+                name: video.video_title
+            }));
+        },
+        
+        /** 检查是否是作者目录 */
+        isAuthorDirectory(dirName) {
+            return this.videoMetadataByAuthor[dirName] !== undefined;
+        },
+        
+        /** 预加载作者视频元数据 */
+        preloadAuthorVideos(author) {
+            // 如果已经有缓存，不需要重新加载
+            if (this.videoMetadataByAuthor[author] && this.videoMetadataByAuthor[author].length > 0) {
+                console.log(`使用缓存的 ${author} 视频元数据，共 ${this.videoMetadataByAuthor[author].length} 条`);
+                return;
+            }
+            
+            // 否则从API加载
+            this.loadAuthorVideos(author);
+        },
+        
+        /** 从API加载作者视频 */
+        async loadAuthorVideos(author) {
+            try {
+                const apiUrl = `/api/xovideos?author=${encodeURIComponent(author)}`;
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === 'success' && Array.isArray(data.data)) {
+                    // 更新缓存
+                    this.videoMetadataByAuthor[author] = data.data;
+                    console.log(`成功加载 ${author} 的 ${data.data.length} 条视频元数据`);
+                }
+            } catch (error) {
+                console.error(`加载 ${author} 视频元数据失败:`, error);
+            }
         },
 
         /** 更新浏览器 URL */
@@ -391,5 +823,55 @@ export default {
             this.updateHistory(newPath);
             this.currentPath = newPath;
         },
-    }
+            /** 加载更多目录用于搜索 */
+    async loadMoreForSearch() {
+        this.searchLoading = true;
+
+        try {
+            // 尝试加载一些常见目录
+            const commonDirs = [
+                'XOVideos/',
+                'videos/',
+                'pornhub/',
+                'SLRabbit/'
+            ];
+
+            for (const dir of commonDirs) {
+                if (!this.directoryCache[dir]) {
+                    await this.loadDirectoryContent(dir);
+                }
+            }
+
+            // 重新执行搜索
+            await this.performSearch();
+        } catch (error) {
+            console.error('加载更多目录失败:', error);
+        } finally {
+            this.searchLoading = false;
+        }
+    },
+
+    /** 高亮显示匹配原因（用于调试） */
+    highlightMatch(result, query) {
+        // 检查文件名匹配
+        const fileName = (result.name || result.video_title || '').toLowerCase();
+        if (fileName.includes(query.toLowerCase())) {
+            return `文件名包含 "${query}"`;
+        }
+
+        // 检查路径匹配
+        const fullPath = (result.Key || '').toLowerCase();
+        if (fullPath.includes(query.toLowerCase())) {
+            return `路径包含 "${query}"`;
+        }
+
+        // 检查作者匹配
+        const author = (result.author || '').toLowerCase();
+        if (author.includes(query.toLowerCase())) {
+            return `作者包含 "${query}"`;
+        }
+
+        return '未知匹配原因';
+    },
+    },
 };
