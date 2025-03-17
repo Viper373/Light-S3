@@ -1,11 +1,16 @@
+import logging
+import os
 from fastapi import FastAPI, Query
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-import os
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.decorator import cache
 from pymongo import MongoClient
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 定义全局变量
 video_metadata = {}
@@ -16,6 +21,9 @@ try:
     db_name = os.getenv("VUE_APP_DB_NAME")
     col_name = os.getenv("VUE_APP_COL_NAME")
 
+    if not mongodb_uri or not db_name or not col_name:
+        raise ValueError("环境变量未设置")
+
     client = MongoClient(
         mongodb_uri,
         maxPoolSize=10,
@@ -24,9 +32,9 @@ try:
     )
     db = client[db_name]
     collection = db[col_name]
-    print("MongoDB 连接成功")
+    logger.info("MongoDB 连接成功")
 except Exception as e:
-    print(f"MongoDB 连接失败: {str(e)}")
+    logger.error(f"MongoDB 连接失败: {str(e)}")
     collection = None
 
 
@@ -47,6 +55,7 @@ async def lifespan(app: FastAPI):
                 }}
             ]
             data = list(collection.aggregate(pipeline))
+            logger.info(f"从 MongoDB 加载了 {len(data)} 条视频元数据")
 
             for item in data:
                 author = item.get("author", "")
@@ -56,10 +65,11 @@ async def lifespan(app: FastAPI):
                     "views": item.get("video_views"),
                     "duration": item.get("duration")
                 }
+            logger.info(f"成功加载 {len(video_metadata)} 条视频元数据")
         else:
-            print("MongoDB 未连接，使用空元数据")
+            logger.warning("MongoDB 未连接，使用空元数据")
     except Exception as e:
-        print(f"预加载元数据失败: {str(e)}")
+        logger.error(f"预加载元数据失败: {str(e)}")
     yield
 
 
@@ -80,6 +90,7 @@ app.add_middleware(
 @cache(expire=7200)
 async def get_videos(author: str = Query(None)):
     try:
+        logger.info(f"收到请求: author={author}")
 
         if author:
             filtered_data = []
@@ -93,6 +104,7 @@ async def get_videos(author: str = Query(None)):
                             "video_views": value.get("views"),
                             "duration": value.get("duration")
                         })
+            logger.info(f"返回 {len(filtered_data)} 条作者 {author} 的数据")
             return {"status": "success", "data": filtered_data}
 
         all_data = []
@@ -105,14 +117,17 @@ async def get_videos(author: str = Query(None)):
                     "video_views": value.get("views"),
                     "duration": value.get("duration")
                 })
+        logger.info(f"返回所有 {len(all_data)} 条数据")
         return {"status": "success", "data": all_data}
     except Exception as e:
         error_msg = str(e)
+        logger.error(f"处理请求时出错: {error_msg}")
         return {"status": "error", "message": error_msg}
 
 
 @app.get("/health")
 async def health_check():
+    logger.info("健康检查请求")
     return {"status": "healthy"}
 
 
