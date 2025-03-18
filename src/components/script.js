@@ -330,7 +330,6 @@ export default {
             try {
                 const videoTitle = videoMetadata.video_title || videoMetadata.name || "";
                 const author = videoMetadata.author || "";
-                let videoFile = null;
                 
                 // 如果视频元数据中已经有videoUrl，直接使用
                 if (videoMetadata.videoUrl) {
