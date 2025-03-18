@@ -156,25 +156,6 @@
             </div>
             <div class="file-info">
               <h3 class="file-name">{{ dir.name }}</h3>
-              <div class="folder-meta">
-                <span class="file-count">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10 9 9 9 8 9"></polyline>
-                  </svg>
-                  视频数量 {{ getDirectoryFileCount(dir.Key) }}
-                </span>
-                <span class="latest-update">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                  </svg>
-                  {{ getDirectoryLatestUpdate(dir.Key) }}
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -190,7 +171,6 @@
               class="video-card"
               @click="handleSearchResultClick(file)"
           >
-            <!-- 保持原有视频卡片内容不变 -->
             <div class="thumbnail-container">
               <img
                   v-if="file.thumbnail_url || file.thumbnailUrl"
@@ -199,7 +179,51 @@
                   :alt="file.video_title || file.name"
                   loading="lazy"
               />
-              <!-- 其余内容保持不变 -->
+              <div class="video-overlay">
+                <div class="play-indicator">
+                  <svg viewBox="0 0 24 24" width="48" height="48">
+                    <path fill="currentColor" d="M8 5v14l11-7z"/>
+                  </svg>
+                </div>
+                <div class="video-meta-overlay">
+                  <span class="duration">
+                    <svg
+                        class="meta-icon"
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                    >
+                      <path
+                          fill="currentColor"
+                          d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
+                      />
+                    </svg>
+                    {{ file.duration || '未知' }}
+                  </span>
+                  <span class="views">
+                    <svg
+                        class="meta-icon"
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                    >
+                      <path
+                          fill="currentColor"
+                          d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+                      />
+                    </svg>
+                    {{ file.views || file.video_views || '0' }}
+                  </span>
+                </div>
+              </div>
+              <!-- 添加作者标签 -->
+              <div class="author-tag" v-if="file.author">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                {{ file.author }}
+              </div>
             </div>
             <div class="file-info">
               <h3 class="file-name">{{ file.video_title || file.name }}</h3>
@@ -258,25 +282,6 @@
             </div>
             <div class="file-info">
               <h3 class="file-name">{{ file.name }}</h3>
-              <div class="folder-meta">
-                <span class="file-count">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10 9 9 9 8 9"></polyline>
-                  </svg>
-                  {{ getDirectoryFileCount(file.Key) }} 个文件
-                </span>
-                <span class="latest-update">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                  </svg>
-                  {{ getDirectoryLatestUpdate(file.Key) }}
-                </span>
-              </div>
             </div>
           </div>
           <!-- 文件项 -->

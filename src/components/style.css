@@ -359,6 +359,21 @@ body {
     height: 14px;
 }
 
+.author-tag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
 .file-info {
     padding: 1rem;
     flex-grow: 1;

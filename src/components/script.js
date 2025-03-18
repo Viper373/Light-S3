@@ -108,6 +108,14 @@ export default {
                 // 只计算非目录的文件
                 return this.directoryCache[dirPath].filter(f => !f.IsDirectory).length;
             }
+            // 如果目录缓存中没有该目录，尝试从视频元数据中获取
+            if (this.videoMetadataByAuthor) {
+                // 从dirKey中提取作者名称
+                const authorName = dirKey.split('/')[0];
+                if (this.videoMetadataByAuthor[authorName]) {
+                    return this.videoMetadataByAuthor[authorName].length;
+                }
+            }
             return 0;
         },
         
@@ -286,9 +294,10 @@ export default {
                 this.clearSearch();
             } else if (result.type === "video") {
                 this.searchAndPlayVideo(result);
+                // 不清除搜索状态，保持在搜索结果页
             } else {
                 this.handleFileClick(result);
-                this.clearSearch();
+                // 不清除搜索状态，保持在搜索结果页
             }
         },
 
@@ -297,6 +306,17 @@ export default {
                 const videoTitle = videoMetadata.video_title || videoMetadata.name || "";
                 const author = videoMetadata.author || "";
                 let videoFile = null;
+                
+                // 如果视频元数据中已经有videoUrl，直接使用
+                if (videoMetadata.videoUrl) {
+                    this.currentVideo = {
+                        url: videoMetadata.videoUrl,
+                        title: videoTitle,
+                        key: videoMetadata.Key || `${author}/${videoTitle}`
+                    };
+                    this.videoPlayerVisible = true;
+                    return;
+                }
                 
                 // 首先在作者目录中查找
                 if (author) {
@@ -340,8 +360,12 @@ export default {
                 }
                 
                 if (videoFile) {
-                    this.handleFileClick(videoFile);
-                    this.clearSearch();
+                    this.currentVideo = {
+                        url: videoFile.videoUrl,
+                        title: videoFile.name,
+                        key: videoFile.Key
+                    };
+                    this.videoPlayerVisible = true;
                 } else {
                     // 如果仍然找不到，尝试加载作者目录
                     if (author && !this.directoryCache[author + "/"]) {
@@ -364,8 +388,12 @@ export default {
                                     const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
                                     videoFile.videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(videoFile.Key);
                                 }
-                                this.handleFileClick(videoFile);
-                                this.clearSearch();
+                                this.currentVideo = {
+                                    url: videoFile.videoUrl,
+                                    title: videoFile.name,
+                                    key: videoFile.Key
+                                };
+                                this.videoPlayerVisible = true;
                                 return;
                             }
                         }
@@ -642,6 +670,8 @@ export default {
         closeVideoPlayer() {
             this.videoPlayerVisible = false;
             this.currentVideo = null;
+            // 保持搜索结果状态，如果之前是在搜索状态
+            this.isSearchActive = this.searchResults.length > 0;
         },
 
         formatDate(timestamp) {
@@ -679,12 +709,14 @@ export default {
         navigateToRoot() {
             this.updateHistory("");
             this.currentPath = "";
+            this.clearSearch(); // 添加清除搜索的逻辑
         },
 
         navigateTo(index) {
             const newPath = this.pathParts.slice(0, index + 1).join("/") + "/";
             this.updateHistory(newPath);
             this.currentPath = newPath;
+            this.clearSearch(); // 添加清除搜索的逻辑
         },
     },
 };
