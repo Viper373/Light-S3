@@ -63,9 +63,7 @@
 
     <!-- 面包屑导航 -->
     <nav class="breadcrumb">
-      <span class="breadcrumb-item" @click="navigateToRoot">
-        S4://viper3
-      </span>
+      <span class="breadcrumb-item" @click="navigateToRoot">S4://viper3</span>
       <span v-if="pathParts.length > 0" class="separator">/</span>
       <span v-for="(part, index) in pathParts" :key="index" @click="navigateTo(index)" class="breadcrumb-item">
         {{ part }}
@@ -268,10 +266,3 @@
     </footer>
   </div>
 </template>
-
-<script>
-import componentScript from './script.js';
-import './style.css';
-
-export default componentScript;
-</script>
