@@ -232,9 +232,35 @@ export default {
                     ...file,
                     path: path || '/',
                     type: file.IsDirectory ? 'directory' : this.getFileType(file.Key.split('/').pop()),
+                    name: file.name || file.Key.split('/').pop() // 确保所有结果都有name属性
                 }));
                 
                 results = [...results, ...formattedResults];
+            }
+            
+            // 添加作者目录到搜索结果
+            if (this.videoMetadataByAuthor) {
+                for (const author in this.videoMetadataByAuthor) {
+                    if (author.toLowerCase().includes(query)) {
+                        // 检查这个作者是否已经在结果中
+                        const authorExists = results.some(r => 
+                            r.IsDirectory && 
+                            (r.name === author || r.Key === author + '/')
+                        );
+                        
+                        if (!authorExists) {
+                            // 添加作者目录到结果中
+                            results.push({
+                                Key: author + '/',
+                                IsDirectory: true,
+                                name: author,
+                                path: '',
+                                type: 'directory',
+                                author: author
+                            });
+                        }
+                    }
+                }
             }
             
             return results.slice(0, 50);
@@ -317,20 +343,38 @@ export default {
                     return;
                 }
                 
-                // 如果是从视频元数据搜索结果点击的，需要构建视频URL
+                // 如果是从视频元数据搜索结果点击的，需要查找对应的视频文件
                 if (videoMetadata.type === "video" && !videoMetadata.videoUrl) {
+                    // 首先尝试在缓存中查找视频文件
+                    let videoFile = null;
+                    
+                    // 构建可能的视频路径，确保添加正确的文件扩展名
+                    let possibleKey = `${author}/${videoTitle}`;
+                    // 检查标题是否已经包含扩展名
+                    if (!possibleKey.endsWith(".mp4") && !possibleKey.endsWith(".webm") && 
+                        !possibleKey.endsWith(".mov") && !possibleKey.endsWith(".avi") && 
+                        !possibleKey.endsWith(".mkv") && !possibleKey.endsWith(".ogg")) {
+                        possibleKey += ".mp4";
+                    }
+                    
+                    // 创建一个模拟的文件对象，使用与正常浏览相同的URL生成逻辑
                     const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                     const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
                     const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
-                    
-                    // 构建可能的视频路径
-                    const possibleKey = `${author}/${videoTitle}.mp4`;
                     const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(possibleKey);
                     
+                    // 使用与handleFileClick相同的对象结构
+                    const fileObject = {
+                        Key: possibleKey,
+                        name: videoTitle,
+                        videoUrl: videoUrl
+                    };
+                    
+                    // 使用与handleFileClick相同的方式设置当前视频
                     this.currentVideo = {
-                        url: videoUrl,
-                        title: videoTitle,
-                        key: possibleKey
+                        url: fileObject.videoUrl,
+                        title: fileObject.name,
+                        key: fileObject.Key
                     };
                     this.videoPlayerVisible = true;
                     return;
@@ -369,7 +413,7 @@ export default {
                     }
                 }
                 
-                // 如果找到了视频文件但没有URL，生成URL
+                // 如果找到了视频文件但没有URL，使用与正常浏览相同的URL生成逻辑
                 if (videoFile && !videoFile.videoUrl) {
                     const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                     const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
@@ -615,6 +659,8 @@ export default {
                         if (!dir.type) dir.type = "directory";
                     });
                     
+                    console.log(`预加载 ${authorDirs.length} 个作者目录...`);
+                    
                     // 限制并发请求数量，每次处理5个目录
                     for (let i = 0; i < authorDirs.length; i += 5) {
                         const batch = authorDirs.slice(i, i + 5);
@@ -638,6 +684,29 @@ export default {
                         // 添加小延迟，避免请求过于频繁
                         if (i + 5 < authorDirs.length) {
                             await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                    }
+                    
+                    console.log(`作者目录预加载完成，共 ${Object.keys(this.directoryCache).length} 个目录`);
+                }
+                
+                // 从视频元数据中提取作者信息，确保即使S3中没有对应目录也能搜索到作者
+                if (this.videoMetadataByAuthor) {
+                    for (const author in this.videoMetadataByAuthor) {
+                        // 检查是否已经有这个作者的目录
+                        const authorDirPath = author + "/";
+                        if (!this.directoryCache[authorDirPath] && author.trim() !== "") {
+                            // 创建一个虚拟的作者目录
+                            this.directoryCache[authorDirPath] = [
+                                {
+                                    Key: authorDirPath,
+                                    IsDirectory: true,
+                                    name: author,
+                                    path: "",
+                                    type: "directory",
+                                    author: author
+                                }
+                            ];
                         }
                     }
                 }
