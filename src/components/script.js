@@ -45,8 +45,8 @@ export default {
             videoMetadata: [],
             videoMetadataByAuthor: {},
             isDevelopment: process.env.NODE_ENV === "development",
-            authorDirectories: [],
-            nonAuthorResults: [],
+            authorDirectories: [], // 添加作者目录数组
+            videoFiles: [],        // 添加视频文件数组
         };
     },
 
@@ -123,7 +123,11 @@ export default {
             try {
                 const s3Results = await this.searchS3Files(query);
                 const metadataResults = await this.searchVideoMetadata(query);
-                this.searchResults = [...s3Results, ...metadataResults];
+                const allResults = [...s3Results, ...metadataResults];
+                // 分离作者目录和视频文件
+                this.authorDirectories = allResults.filter(result => result.IsDirectory);
+                this.videoFiles = allResults.filter(result => !result.IsDirectory);
+                this.searchResults = allResults;
                 this.isSearchActive = this.searchResults.length > 0;
             } catch (error) {
                 console.error("搜索失败:", error);
@@ -194,6 +198,8 @@ export default {
         clearSearch() {
             this.searchQuery = "";
             this.searchResults = [];
+            this.authorDirectories = [];
+            this.videoFiles = [];
             this.isSearchActive = false;
         },
 
@@ -278,11 +284,8 @@ export default {
             const savedDarkMode = localStorage.getItem("darkMode");
             if (savedDarkMode === "true") {
                 document.body.classList.add("dark-mode");
-            } else if (
-                savedDarkMode === null &&
-                window.matchMedia("(prefers-color-scheme: dark)").matches
-            ) {
-                document.body.classList.add("dark-mode");
+            } else {
+                document.body.classList.remove("dark-mode"); // 明确移除 dark-mode 类
             }
         },
 
