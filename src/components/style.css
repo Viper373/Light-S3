@@ -282,10 +282,6 @@ body {
 /* 搜索结果样式 */
 .search-results {
     margin-top: 1.5rem;
-    background-color: var(--bg-white);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
 }
 
 .dark-mode .search-results {
@@ -300,6 +296,8 @@ body {
     padding: 1rem 1.5rem;
     background-color: var(--primary-color);
     color: white;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    margin-bottom: 0;
 }
 
 .search-results-header h2 {
@@ -338,7 +336,7 @@ body {
 }
 
 .dark-mode .close-search {
-    color: #a0aec0;
+    color: #03060a;
 }
 
 .dark-mode .close-search:hover {
@@ -363,10 +361,24 @@ body {
 
 /* 调整搜索结果中的文件网格 */
 .search-results .file-grid {
-    padding: 1.5rem;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 1.5rem;
+    padding: 1.5rem;
+    background-color: var(--bg-white);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    box-shadow: var(--shadow-md);
+}
+
+/* 作者目录独占首行 */
+.search-results .author-directory-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--placeholder-bg);
 }
 
 /* 搜索结果中的文件卡片样式 */
@@ -477,23 +489,13 @@ body {
     align-items: center;
 }
 
-.search-results .file-meta .author::before {
-    content: '👤';
-    margin-right: 0.25rem;
-}
-
-.search-results .file-meta .views::before {
-    content: '👁️';
-    margin-right: 0.25rem;
-}
-
-.search-results .file-meta .size::before {
-    content: '📊';
-    margin-right: 0.25rem;
-}
-
-.search-results .file-meta .date::before {
-    content: '📅';
+/* 使用SVG图标替代emoji */
+.search-results .file-meta .author svg,
+.search-results .file-meta .views svg,
+.search-results .file-meta .size svg,
+.search-results .file-meta .date svg {
+    width: 14px;
+    height: 14px;
     margin-right: 0.25rem;
 }
 
