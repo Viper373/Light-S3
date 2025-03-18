@@ -309,7 +309,14 @@ export default {
         handleSearchResultClick(result) {
             if (result.IsDirectory) {
                 // 修改：直接使用handleFileClick处理目录点击，确保行为一致
-                const newPath = result.path + (result.path.endsWith("/") ? "" : "/") + result.name;
+                let newPath;
+                if (result.Key) {
+                    // 如果有完整的Key，直接使用
+                    newPath = result.Key;
+                } else {
+                    // 否则从path和name构建
+                    newPath = result.path + (result.path.endsWith("/") ? "" : "/") + result.name;
+                }
                 // 创建一个符合handleFileClick期望的对象
                 const dirObject = {
                     Key: newPath,
@@ -344,16 +351,58 @@ export default {
                 
                 // 如果是从视频元数据搜索结果点击的，需要查找对应的视频文件
                 if (videoMetadata.type === "video" && !videoMetadata.videoUrl) {
-                    // 首先尝试在缓存中查找视频文件
-                    // let videoFile = null; // 移除未使用的变量声明
                     
                     // 构建可能的视频路径，确保添加正确的文件扩展名
-                    let possibleKey = `${author}/${videoTitle}`;
-                    // 检查标题是否已经包含扩展名
-                    if (!possibleKey.endsWith(".mp4") && !possibleKey.endsWith(".webm") && 
-                        !possibleKey.endsWith(".mov") && !possibleKey.endsWith(".avi") && 
-                        !possibleKey.endsWith(".mkv") && !possibleKey.endsWith(".ogg")) {
-                        possibleKey += ".mp4";
+                    // 首先检查是否有完整路径，如果没有则构建
+                    let possibleKey = videoMetadata.Key || "";
+                    
+                    // 如果没有完整路径，则尝试从作者和标题构建
+                    if (!possibleKey) {
+                        // 检查作者目录是否存在于缓存中
+                        const authorDirPath = author.endsWith("/") ? author : author + "/";
+                        if (this.directoryCache[authorDirPath]) {
+                            // 在作者目录中查找匹配的视频文件
+                            const videoFile = this.findBestMatchingVideo(this.directoryCache[authorDirPath], videoTitle);
+                            if (videoFile) {
+                                possibleKey = videoFile.Key;
+                            }
+                        }
+                        
+                        // 如果仍然没有找到，则尝试在所有缓存目录中查找
+                        if (!possibleKey) {
+                            // 首先在所有缓存目录中查找
+                            for (const [path, files] of Object.entries(this.directoryCache)) {
+                                // 跳过空路径（根目录）
+                                if (path === "") continue;
+                                
+                                const found = this.findBestMatchingVideo(files, videoTitle);
+                                if (found) {
+                                    possibleKey = found.Key;
+                                    break;
+                                }
+                            }
+                            
+                            // 如果仍然没有找到，则使用简单的作者/标题组合，但尝试从当前路径构建完整路径
+                            if (!possibleKey) {
+                                // 检查当前路径是否包含前置目录
+                                const currentPathParts = this.currentPath.split('/').filter(p => p);
+                                let basePath = "";
+                                
+                                // 如果当前路径不是作者目录，且不是根目录，则使用当前路径作为基础路径
+                                if (currentPathParts.length > 0 && currentPathParts[currentPathParts.length - 1] !== author) {
+                                    basePath = this.currentPath;
+                                    if (!basePath.endsWith('/')) basePath += '/';
+                                }
+                                
+                                possibleKey = `${basePath}${author}/${videoTitle}`;
+                                // 检查标题是否已经包含扩展名
+                                if (!possibleKey.endsWith(".mp4") && !possibleKey.endsWith(".webm") && 
+                                    !possibleKey.endsWith(".mov") && !possibleKey.endsWith(".avi") && 
+                                    !possibleKey.endsWith(".mkv") && !possibleKey.endsWith(".ogg")) {
+                                    possibleKey += ".mp4";
+                                }
+                            }
+                        }
                     }
                     
                     // 创建一个模拟的文件对象，使用与正常浏览相同的URL生成逻辑
@@ -420,7 +469,9 @@ export default {
                     const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                     const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
                     const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                    // 确保使用完整的Key路径生成URL
                     videoFile.videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(videoFile.Key);
+                    console.log("生成视频URL:", videoFile.videoUrl, "原始Key:", videoFile.Key);
                 }
                 
                 if (videoFile) {
@@ -661,8 +712,6 @@ export default {
                         if (!dir.type) dir.type = "directory";
                     });
                     
-                    console.log(`预加载 ${authorDirs.length} 个作者目录...`);
-                    
                     // 限制并发请求数量，每次处理5个目录
                     for (let i = 0; i < authorDirs.length; i += 5) {
                         const batch = authorDirs.slice(i, i + 5);
@@ -688,8 +737,6 @@ export default {
                             await new Promise(resolve => setTimeout(resolve, 100));
                         }
                     }
-                    
-                    console.log(`作者目录预加载完成，共 ${Object.keys(this.directoryCache).length} 个目录`);
                 }
                 
                 // 从视频元数据中提取作者信息，确保即使S3中没有对应目录也能搜索到作者
@@ -743,8 +790,14 @@ export default {
         },
 
         updateBrowserUrl() {
+            // 只有当路径不为空时才添加path参数，保持根路径URL干净
             const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set("path", this.currentPath);
+            if (this.currentPath && this.currentPath !== "") {
+                newUrl.searchParams.set("path", this.currentPath);
+            } else {
+                // 如果是根路径，移除path参数
+                newUrl.searchParams.delete("path");
+            }
             window.history.replaceState({}, "", newUrl.toString());
         },
 
