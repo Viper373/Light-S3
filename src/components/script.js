@@ -102,8 +102,8 @@ export default {
         
         // 获取目录中的文件数量
         getDirectoryFileCount(dirKey) {
-            // 查找缓存中的目录内容
-            const dirPath = dirKey.replace(/\/?$/, "/");
+            // 确保目录键以斜杠结尾
+            const dirPath = dirKey.endsWith("/") ? dirKey : dirKey + "/";
             if (this.directoryCache[dirPath]) {
                 // 只计算非目录的文件
                 return this.directoryCache[dirPath].filter(f => !f.IsDirectory).length;
@@ -113,7 +113,8 @@ export default {
         
         // 获取目录中最近的更新日期
         getDirectoryLatestUpdate(dirKey) {
-            const dirPath = dirKey.replace(/\/?$/, "/");
+            // 确保目录键以斜杠结尾
+            const dirPath = dirKey.endsWith("/") ? dirKey : dirKey + "/";
             if (this.directoryCache[dirPath]) {
                 // 过滤出非目录文件并按日期排序
                 const files = this.directoryCache[dirPath].filter(f => !f.IsDirectory && f.LastModified);
@@ -293,14 +294,35 @@ export default {
 
         async searchAndPlayVideo(videoMetadata) {
             try {
-                const videoTitle = videoMetadata.video_title || "";
+                const videoTitle = videoMetadata.video_title || videoMetadata.name || "";
                 const author = videoMetadata.author || "";
                 let videoFile = null;
-                if (author && this.directoryCache[author]) {
-                    videoFile = this.findBestMatchingVideo(this.directoryCache[author], videoTitle);
+                
+                // 首先在作者目录中查找
+                if (author) {
+                    // 确保作者目录路径格式正确（以斜杠结尾）
+                    const authorDirPath = author.endsWith("/") ? author : author + "/";
+                    // 检查缓存中是否有该作者目录
+                    if (this.directoryCache[authorDirPath]) {
+                        videoFile = this.findBestMatchingVideo(this.directoryCache[authorDirPath], videoTitle);
+                    }
+                    
+                    // 如果没找到，尝试其他可能的作者目录路径格式
+                    if (!videoFile) {
+                        // 尝试不带斜杠的路径
+                        const altAuthorPath = author.replace(/\/$/, "");
+                        if (this.directoryCache[altAuthorPath]) {
+                            videoFile = this.findBestMatchingVideo(this.directoryCache[altAuthorPath], videoTitle);
+                        }
+                    }
                 }
+                
+                // 如果在作者目录中没找到，在所有缓存的目录中查找
                 if (!videoFile) {
-                    for (const [_path, files] of Object.entries(this.directoryCache)) {
+                    for (const [path, files] of Object.entries(this.directoryCache)) {
+                        // 跳过空路径（根目录）
+                        if (path === "") continue;
+                        
                         const found = this.findBestMatchingVideo(files, videoTitle);
                         if (found) {
                             videoFile = found;
@@ -308,16 +330,47 @@ export default {
                         }
                     }
                 }
+                
+                // 如果找到了视频文件但没有URL，生成URL
                 if (videoFile && !videoFile.videoUrl) {
                     const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                     const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
                     const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
                     videoFile.videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(videoFile.Key);
                 }
+                
                 if (videoFile) {
                     this.handleFileClick(videoFile);
                     this.clearSearch();
                 } else {
+                    // 如果仍然找不到，尝试加载作者目录
+                    if (author && !this.directoryCache[author + "/"]) {
+                        // 临时保存当前路径
+                        const currentPathBackup = this.currentPath;
+                        // 设置当前路径为作者目录
+                        this.currentPath = author + "/";
+                        // 加载作者目录内容
+                        await this.loadFileList();
+                        // 恢复当前路径
+                        this.currentPath = currentPathBackup;
+                        
+                        // 再次尝试查找视频
+                        if (this.directoryCache[author + "/"]) {
+                            videoFile = this.findBestMatchingVideo(this.directoryCache[author + "/"], videoTitle);
+                            if (videoFile) {
+                                if (!videoFile.videoUrl) {
+                                    const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
+                                    const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
+                                    const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                                    videoFile.videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(videoFile.Key);
+                                }
+                                this.handleFileClick(videoFile);
+                                this.clearSearch();
+                                return;
+                            }
+                        }
+                    }
+                    
                     alert(`未找到视频文件: ${videoTitle}\n请尝试浏览到对应作者目录手动查找。`);
                 }
             } catch (error) {
@@ -502,7 +555,39 @@ export default {
 
         async loadInitialData() {
             try {
+                // 首先加载根目录和视频元数据
                 await Promise.all([this.loadFileList(), this.loadAllVideoMetadata()]);
+                
+                // 预加载所有作者目录，以便在首页搜索时能够找到作者目录
+                if (this.directoryCache[""] && this.directoryCache[""].length > 0) {
+                    const authorDirs = this.directoryCache[""].filter(f => f.IsDirectory);
+                    
+                    // 限制并发请求数量，每次处理5个目录
+                    for (let i = 0; i < authorDirs.length; i += 5) {
+                        const batch = authorDirs.slice(i, i + 5);
+                        await Promise.all(
+                            batch.map(dir => {
+                                const dirPath = dir.Key;
+                                if (!this.directoryCache[dirPath]) {
+                                    // 临时保存当前路径
+                                    const currentPathBackup = this.currentPath;
+                                    // 设置当前路径为作者目录
+                                    this.currentPath = dirPath;
+                                    // 加载作者目录内容
+                                    return this.loadFileList().then(() => {
+                                        // 恢复当前路径
+                                        this.currentPath = currentPathBackup;
+                                    });
+                                }
+                                return Promise.resolve();
+                            })
+                        );
+                        // 添加小延迟，避免请求过于频繁
+                        if (i + 5 < authorDirs.length) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                    }
+                }
             } catch (error) {
                 console.error("加载初始数据失败:", error);
                 this.error = `加载失败: ${error.message}`;
