@@ -47,6 +47,7 @@ export default {
             isDevelopment: process.env.NODE_ENV === "development",
             authorDirectories: [],
             videoFiles: [],
+            showBackToTop: false,
         };
     },
 
@@ -76,14 +77,57 @@ export default {
 
     mounted() {
         this.applyDarkModePreference();
+        window.addEventListener('scroll', this.handleScroll);
     },
 
     beforeUnmount() {
         window.removeEventListener("mouseup", this.handleMouseButtons);
+        window.removeEventListener('scroll', this.handleScroll);
         this.scrollObserver?.disconnect();
     },
 
     methods: {
+        // 处理滚动事件，显示/隐藏回到顶部按钮
+        handleScroll() {
+            this.showBackToTop = window.scrollY > 300;
+        },
+        
+        // 滚动到顶部
+        scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        },
+        
+        // 获取目录中的文件数量
+        getDirectoryFileCount(dirKey) {
+            // 查找缓存中的目录内容
+            const dirPath = dirKey.replace(/\/?$/, "/");
+            if (this.directoryCache[dirPath]) {
+                // 只计算非目录的文件
+                return this.directoryCache[dirPath].filter(f => !f.IsDirectory).length;
+            }
+            return 0;
+        },
+        
+        // 获取目录中最近的更新日期
+        getDirectoryLatestUpdate(dirKey) {
+            const dirPath = dirKey.replace(/\/?$/, "/");
+            if (this.directoryCache[dirPath]) {
+                // 过滤出非目录文件并按日期排序
+                const files = this.directoryCache[dirPath].filter(f => !f.IsDirectory && f.LastModified);
+                if (files.length > 0) {
+                    // 按日期降序排序
+                    files.sort((a, b) => {
+                        return new Date(b.LastModified) - new Date(a.LastModified);
+                    });
+                    // 返回最新的日期
+                    return this.formatDate(files[0].LastModified);
+                }
+            }
+            return "暂无更新";
+        },
         initializeS3Client() {
             this.s3Client = new S3Client({
                 region: process.env.VUE_APP_S3_REGION,
@@ -114,46 +158,77 @@ export default {
                 this.clearSearch();
                 return;
             }
+            
             const query = this.searchQuery.trim().toLowerCase();
+            
             try {
+                // 如果目录缓存为空，先加载根目录
+                if (Object.keys(this.directoryCache).length === 0) {
+                    await this.loadFileList();
+                }
+                
+                // 搜索S3文件
                 const s3Results = await this.searchS3Files(query);
+                
+                // 搜索视频元数据
                 const metadataResults = await this.searchVideoMetadata(query);
+                
+                // 合并结果
                 const allResults = [...s3Results, ...metadataResults];
-                this.authorDirectories = allResults.filter(result => result.IsDirectory && result.Key);
-                this.videoFiles = allResults.filter(result => !result.IsDirectory);
+                
+                // 分离作者目录和视频文件
+                this.authorDirectories = allResults.filter(result => 
+                    result.IsDirectory && 
+                    (result.name?.toLowerCase().includes(query) || 
+                     (result.author && result.author.toLowerCase().includes(query)))
+                );
+                
+                this.videoFiles = allResults.filter(result => 
+                    !result.IsDirectory && 
+                    (this.getFileType(result.Key?.split('/').pop() || result.name || '') === 'video' || 
+                     result.type === 'video')
+                );
+                
+                // 更新搜索结果
                 this.searchResults = allResults;
                 this.isSearchActive = this.searchResults.length > 0;
-                console.log("搜索结果:", allResults);
-                console.log("作者目录:", this.authorDirectories);
-                console.log("视频文件:", this.videoFiles);
             } catch (error) {
                 console.error("搜索失败:", error);
             }
         },
 
         async searchS3Files(query) {
+            // 如果目录缓存为空，先加载根目录
             if (Object.keys(this.directoryCache).length === 0) {
                 await this.loadFileList();
             }
+            
             let results = [];
+            
+            // 遍历所有缓存的目录
             for (const [path, files] of Object.entries(this.directoryCache)) {
-                const matchedFiles = files.filter((file) => {
-                    const fileName = file.Key.split("/").pop().toLowerCase();
+                // 过滤匹配的文件和目录
+                const matchedFiles = files.filter(file => {
+                    // 获取文件名和完整路径
+                    const fileName = file.Key.split('/').pop().toLowerCase();
                     const fullPath = file.Key.toLowerCase();
-                    const authorName = file.author ? file.author.toLowerCase() : "";
-                    return (
-                        fileName.includes(query) ||
-                        fullPath.includes(query) ||
-                        authorName.includes(query)
-                    );
+                    const authorName = file.author ? file.author.toLowerCase() : '';
+                    
+                    return fileName.includes(query) || 
+                           fullPath.includes(query) || 
+                           authorName.includes(query);
                 });
-                const formattedResults = matchedFiles.map((file) => ({
+                
+                // 格式化结果
+                const formattedResults = matchedFiles.map(file => ({
                     ...file,
-                    path: path || "/",
-                    type: file.IsDirectory ? "directory" : this.getFileType(file.Key.split("/").pop()),
+                    path: path || '/',
+                    type: file.IsDirectory ? 'directory' : this.getFileType(file.Key.split('/').pop()),
                 }));
+                
                 results = [...results, ...formattedResults];
             }
+            
             return results.slice(0, 50);
         },
 
@@ -199,7 +274,14 @@ export default {
 
         handleSearchResultClick(result) {
             if (result.IsDirectory) {
-                this.currentPath = result.path + (result.path.endsWith("/") ? "" : "/") + result.name;
+                // 修改：直接使用handleFileClick处理目录点击，确保行为一致
+                const newPath = result.path + (result.path.endsWith("/") ? "" : "/") + result.name;
+                // 创建一个符合handleFileClick期望的对象
+                const dirObject = {
+                    Key: newPath,
+                    IsDirectory: true
+                };
+                this.handleFileClick(dirObject);
                 this.clearSearch();
             } else if (result.type === "video") {
                 this.searchAndPlayVideo(result);
