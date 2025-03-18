@@ -512,8 +512,6 @@ body {
     color: var(--text-secondary);
     transition: var(--transition);
     box-shadow: var(--shadow-sm);
-    overflow: hidden;
-    /* 添加此行以裁剪移出视图的图标 */
     position: relative;
 }
 
@@ -524,25 +522,45 @@ body {
 }
 
 .action-button svg {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
 }
 
 .theme-toggle {
     position: relative;
-    width: 20px;
-    height: 20px;
+    width: 40px;
+    height: 40px;
 }
 
 .theme-toggle .sun-icon,
 .theme-toggle .moon-icon {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
     transition: transform 0.5s ease, opacity 0.5s ease;
-    /* 添加 opacity 过渡 */
+}
+
+body:not(.dark-mode) .theme-toggle .sun-icon {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+}
+
+body:not(.dark-mode) .theme-toggle .moon-icon {
     opacity: 0;
-    /* 默认隐藏 */
+    transform: translate(-50%, 50%);
+}
+
+body.dark-mode .theme-toggle .sun-icon {
+    opacity: 0;
+    transform: translate(-50%, -150%);
+}
+
+body.dark-mode .theme-toggle .moon-icon {
+    opacity: 1;
+    transform: translate(-50%, -50%);
 }
 
 .author-directories,
@@ -573,30 +591,6 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.5rem;
     padding: 1rem 0;
-}
-
-body:not(.dark-mode) .theme-toggle .sun-icon {
-    transform: translateY(0);
-    opacity: 1;
-    /* 日间模式显示太阳 */
-}
-
-body:not(.dark-mode) .theme-toggle .moon-icon {
-    transform: translateY(40px);
-    opacity: 0;
-    /* 隐藏月亮 */
-}
-
-body.dark-mode .theme-toggle .sun-icon {
-    transform: translateY(-40px);
-    opacity: 0;
-    /* 隐藏太阳 */
-}
-
-body.dark-mode .theme-toggle .moon-icon {
-    transform: translateY(0);
-    opacity: 1;
-    /* 夜间模式显示月亮 */
 }
 
 body.dark-mode {

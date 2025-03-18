@@ -45,8 +45,8 @@ export default {
             videoMetadata: [],
             videoMetadataByAuthor: {},
             isDevelopment: process.env.NODE_ENV === "development",
-            authorDirectories: [], // 添加作者目录数组
-            videoFiles: [],        // 添加视频文件数组
+            authorDirectories: [],
+            videoFiles: [],
         };
     },
 
@@ -98,20 +98,15 @@ export default {
 
         handleSearchInput() {
             if (this.searchQuery.length >= 1) {
-                this.performSearch();
+                if (this.searchTimeout) {
+                    clearTimeout(this.searchTimeout);
+                }
+                this.searchTimeout = setTimeout(() => {
+                    this.performSearch();
+                }, 300);
             } else {
                 this.clearSearch();
             }
-            if (this.searchTimeout) {
-                clearTimeout(this.searchTimeout);
-            }
-            if (!this.searchQuery.trim()) {
-                this.clearSearch();
-                return;
-            }
-            this.searchTimeout = setTimeout(() => {
-                this.performSearch();
-            }, 300);
         },
 
         async performSearch() {
@@ -124,11 +119,13 @@ export default {
                 const s3Results = await this.searchS3Files(query);
                 const metadataResults = await this.searchVideoMetadata(query);
                 const allResults = [...s3Results, ...metadataResults];
-                // 分离作者目录和视频文件
-                this.authorDirectories = allResults.filter(result => result.IsDirectory);
+                this.authorDirectories = allResults.filter(result => result.IsDirectory && result.Key);
                 this.videoFiles = allResults.filter(result => !result.IsDirectory);
                 this.searchResults = allResults;
                 this.isSearchActive = this.searchResults.length > 0;
+                console.log("搜索结果:", allResults);
+                console.log("作者目录:", this.authorDirectories);
+                console.log("视频文件:", this.videoFiles);
             } catch (error) {
                 console.error("搜索失败:", error);
             }
@@ -145,20 +142,16 @@ export default {
                     const fullPath = file.Key.toLowerCase();
                     const authorName = file.author ? file.author.toLowerCase() : "";
                     return (
-                        fileName.indexOf(query) !== -1 ||
-                        fullPath.indexOf(query) !== -1 ||
-                        authorName.indexOf(query) !== -1
+                        fileName.includes(query) ||
+                        fullPath.includes(query) ||
+                        authorName.includes(query)
                     );
                 });
-                const formattedResults = matchedFiles.map((file) => {
-                    return {
-                        ...file,
-                        path: path || "/",
-                        type: file.IsDirectory
-                            ? "directory"
-                            : this.getFileType(file.Key.split("/").pop()),
-                    };
-                });
+                const formattedResults = matchedFiles.map((file) => ({
+                    ...file,
+                    path: path || "/",
+                    type: file.IsDirectory ? "directory" : this.getFileType(file.Key.split("/").pop()),
+                }));
                 results = [...results, ...formattedResults];
             }
             return results.slice(0, 50);
@@ -173,7 +166,7 @@ export default {
                 .filter((video) => {
                     const title = (video.video_title || "").toLowerCase();
                     const author = (video.author || "").toLowerCase();
-                    return title.indexOf(query) !== -1 || author.indexOf(query) !== -1;
+                    return title.includes(query) || author.includes(query);
                 })
                 .map((video) => {
                     const imgCdn = process.env.VUE_APP_IMG_CDN || "";
@@ -187,10 +180,11 @@ export default {
                         type: "video",
                         name: video.video_title,
                         thumbnail_url: thumbnailUrl,
-                        Size: video.Size || 104857600, // Default 100MB if not provided
+                        Size: video.Size || 104857600,
                         LastModified: video.upload_date || new Date().toISOString(),
                         views: video.video_views || 0,
                         duration: video.duration || "N/A",
+                        IsDirectory: false,
                     };
                 });
         },
@@ -236,8 +230,7 @@ export default {
                     const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                     const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
                     const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
-                    videoFile.videoUrl =
-                        s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(videoFile.Key);
+                    videoFile.videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(videoFile.Key);
                 }
                 if (videoFile) {
                     this.handleFileClick(videoFile);
@@ -257,18 +250,10 @@ export default {
                 return !file.IsDirectory && this.getFileType(fileName) === "video";
             });
             if (videoFiles.length === 0) return null;
-            const normalizedTitle = videoTitle
-                .toLowerCase()
-                .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
-                .replace(/\s+/g, " ")
-                .trim();
+            const normalizedTitle = videoTitle.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").replace(/\s+/g, " ").trim();
             let match = videoFiles.find((file) => {
                 const fileName = file.Key.split("/").pop().toLowerCase();
-                const normalizedFileName = fileName
-                    .replace(/\.[^.]+$/, "")
-                    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
-                    .replace(/\s+/g, " ")
-                    .trim();
+                const normalizedFileName = fileName.replace(/\.[^.]+$/, "").replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").replace(/\s+/g, " ").trim();
                 return normalizedFileName.includes(normalizedTitle) || normalizedTitle.includes(normalizedFileName);
             });
             return match || videoFiles[0];
@@ -282,11 +267,8 @@ export default {
 
         applyDarkModePreference() {
             const savedDarkMode = localStorage.getItem("darkMode");
-            if (savedDarkMode === "true") {
-                document.body.classList.add("dark-mode");
-            } else {
-                document.body.classList.remove("dark-mode"); // 明确移除 dark-mode 类
-            }
+            const isDark = savedDarkMode === "true" || (!savedDarkMode && window.matchMedia("(prefers-color-scheme: dark)").matches);
+            document.body.classList.toggle("dark-mode", isDark);
         },
 
         toggleDarkMode() {
@@ -296,16 +278,9 @@ export default {
 
         generatePlaceholder(key) {
             const colors = ["#2c3e50", "#34495e", "#7f8c8d", "#95a5a6"];
-            const hash = Array.from(key).reduce(
-                (acc, char) => char.charCodeAt(0) + (acc << 5) - acc,
-                0
-            );
+            const hash = Array.from(key).reduce((acc, char) => char.charCodeAt(0) + (acc << 5) - acc, 0);
             const color = colors[Math.abs(hash) % colors.length];
-            return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 16 9' preserveAspectRatio='none'><rect width='16' height='9' fill='${encodeURIComponent(
-                color
-            )}'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, sans-serif' font-size='1.5' fill='%23fff'>${encodeURIComponent(
-                key.split("/").pop()?.substring(0, 12) || ""
-            )}</text></svg>`;
+            return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 16 9' preserveAspectRatio='none'><rect width='16' height='9' fill='${encodeURIComponent(color)}'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, sans-serif' font-size='1.5' fill='%23fff'>${encodeURIComponent(key.split("/").pop()?.substring(0, 12) || "")}</text></svg>`;
         },
 
         initPathFromUrl() {
@@ -356,6 +331,7 @@ export default {
                         Key: prefix.Prefix,
                         IsDirectory: true,
                         name: parts[parts.length - 1] || "",
+                        author: parts.length > 1 ? parts[parts.length - 2] : "",
                     };
                 });
                 const files = (s3Response.Contents || [])
@@ -368,14 +344,11 @@ export default {
                         const imgCdn = process.env.VUE_APP_IMG_CDN || "";
                         const ghOwner = process.env.VUE_APP_GH_OWNER || "";
                         const ghRepo = process.env.VUE_APP_GH_REPO || "";
-                        const thumbnailUrl = `${imgCdn}/${ghOwner}/${ghRepo}/${encodeURIComponent(
-                            author
-                        )}/${encodeURIComponent(name)}.jpg`;
+                        const thumbnailUrl = `${imgCdn}/${ghOwner}/${ghRepo}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`;
                         const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                         const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
                         const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
-                        const videoUrl =
-                            s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(file.Key);
+                        const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(file.Key);
                         return {
                             Key: file.Key,
                             IsDirectory: false,
