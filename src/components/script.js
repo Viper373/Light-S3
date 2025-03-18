@@ -187,9 +187,8 @@ export default {
                 
                 // 分离作者目录和视频文件
                 this.authorDirectories = allResults.filter(result => 
-                    result.IsDirectory && 
-                    (result.name?.toLowerCase().includes(query) || 
-                     (result.author && result.author.toLowerCase().includes(query)))
+                    result.IsDirectory || 
+                    (result.author && !result.video_title && !result.Key)
                 );
                 
                 this.videoFiles = allResults.filter(result => 
@@ -313,6 +312,25 @@ export default {
                         url: videoMetadata.videoUrl,
                         title: videoTitle,
                         key: videoMetadata.Key || `${author}/${videoTitle}`
+                    };
+                    this.videoPlayerVisible = true;
+                    return;
+                }
+                
+                // 如果是从视频元数据搜索结果点击的，需要构建视频URL
+                if (videoMetadata.type === "video" && !videoMetadata.videoUrl) {
+                    const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
+                    const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
+                    const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                    
+                    // 构建可能的视频路径
+                    const possibleKey = `${author}/${videoTitle}.mp4`;
+                    const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(possibleKey);
+                    
+                    this.currentVideo = {
+                        url: videoUrl,
+                        title: videoTitle,
+                        key: possibleKey
                     };
                     this.videoPlayerVisible = true;
                     return;
@@ -589,6 +607,13 @@ export default {
                 // 预加载所有作者目录，以便在首页搜索时能够找到作者目录
                 if (this.directoryCache[""] && this.directoryCache[""].length > 0) {
                     const authorDirs = this.directoryCache[""].filter(f => f.IsDirectory);
+                    
+                    // 确保将作者目录添加到搜索结果中
+                    authorDirs.forEach(dir => {
+                        // 确保目录对象有正确的属性
+                        if (!dir.path) dir.path = "";
+                        if (!dir.type) dir.type = "directory";
+                    });
                     
                     // 限制并发请求数量，每次处理5个目录
                     for (let i = 0; i < authorDirs.length; i += 5) {
