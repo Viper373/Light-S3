@@ -135,189 +135,120 @@
         <h2>搜索结果: {{ searchResults.length }} 个匹配项</h2>
         <button class="close-search" @click="clearSearch">关闭</button>
       </div>
-      <div class="file-grid">
-        <!-- 作者目录独占首行 -->
-        <div v-if="authorDirectories.length > 0" class="author-directory-row">
-          <div
-            v-for="result in authorDirectories"
-            :key="result.Key"
-            class="file-item"
-            @click="handleSearchResultClick(result)"
-          >
-            <div class="file-card directory">
-              <div class="file-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24">
-                  <path
-                    fill="currentColor"
-                    d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
-                  />
-                </svg>
-              </div>
-              <div class="file-details">
-                <div class="file-name">{{ result.name }}</div>
-                <div class="file-path">{{ result.path || "/" }}</div>
-                <div class="file-meta">
-                  <span class="author">
-                    <svg viewBox="0 0 24 24" width="14" height="14">
-                      <path
-                        fill="currentColor"
-                        d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                      />
-                    </svg>
-                    作者目录
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- 其他搜索结果 -->
+      <div class="video-grid">
+        <!-- 目录项 -->
         <div
-          v-for="result in nonAuthorResults"
-          :key="result.Key || result.id"
-          class="file-item"
+          v-for="result in searchResults.filter((r) => r.IsDirectory)"
+          :key="result.Key"
+          class="folder-card"
           @click="handleSearchResultClick(result)"
         >
-          <!-- 目录项 -->
-          <div v-if="result.IsDirectory" class="file-card directory">
-            <div class="file-icon">
-              <svg viewBox="0 0 24 24" width="24" height="24">
-                <path
-                  fill="currentColor"
-                  d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
-                />
+          <div class="folder-icon">
+            <svg viewBox="0 0 24 24" width="48" height="48">
+              <path
+                fill="currentColor"
+                d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"
+              />
+            </svg>
+          </div>
+          <div class="file-info">
+            <h3 class="file-name">{{ result.name }}</h3>
+          </div>
+        </div>
+        <!-- 视频和文件项 -->
+        <div
+          v-for="result in searchResults.filter((r) => !r.IsDirectory)"
+          :key="result.Key || result.id"
+          class="video-card"
+          @click="handleSearchResultClick(result)"
+        >
+          <div class="thumbnail-container">
+            <img
+              v-if="result.thumbnail_url || result.thumbnailUrl"
+              :src="result.thumbnail_url || result.thumbnailUrl"
+              class="thumbnail-image"
+              :alt="result.video_title || result.name"
+              loading="lazy"
+            />
+            <div v-else class="thumbnail placeholder">
+              <svg viewBox="0 0 24 24" width="36" height="36">
+                <path fill="currentColor" d="M8 5v14l11-7z" />
               </svg>
             </div>
-            <div class="file-details">
-              <div class="file-name">{{ result.name }}</div>
-              <div class="file-path">{{ result.path || "/" }}</div>
-              <div class="file-meta">
-                <span v-if="result.LastModified" class="date">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
-                    <path
-                      fill="currentColor"
-                      d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"
-                    />
-                  </svg>
-                  {{ formatDate(result.LastModified) }}
-                </span>
-              </div>
-            </div>
-          </div>
-          <!-- 视频元数据项 -->
-          <div v-else-if="result.type === 'video'" class="file-card video">
-            <div class="thumbnail-container">
-              <img
-                v-if="result.thumbnail_url"
-                :src="result.thumbnail_url"
-                class="thumbnail"
-                :alt="result.video_title"
-                loading="lazy"
-              />
-              <div v-else class="thumbnail placeholder">
-                <svg viewBox="0 0 24 24" width="36" height="36">
+            <div class="video-overlay">
+              <div class="play-indicator">
+                <svg viewBox="0 0 24 24" width="48" height="48">
                   <path fill="currentColor" d="M8 5v14l11-7z" />
                 </svg>
               </div>
-              <div v-if="result.duration" class="duration-badge">
-                {{ result.duration }}
-              </div>
-            </div>
-            <div class="file-details">
-              <div class="file-name">{{ result.video_title || result.name }}</div>
-              <div class="file-meta">
-                <span v-if="result.author" class="author">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
+              <div class="video-meta-overlay">
+                <span class="duration" v-if="result.duration">
+                  <svg
+                    class="meta-icon"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                  >
                     <path
                       fill="currentColor"
-                      d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                      d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
                     />
                   </svg>
-                  {{ result.author }}
+                  {{ result.duration }}
                 </span>
-                <span v-if="result.video_views" class="views">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
+                <span class="views" v-if="result.video_views || result.views">
+                  <svg
+                    class="meta-icon"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                  >
                     <path
                       fill="currentColor"
                       d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
                     />
                   </svg>
-                  {{ result.video_views }} 次观看
-                </span>
-                <span v-if="result.upload_date" class="date">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
-                    <path
-                      fill="currentColor"
-                      d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"
-                    />
-                  </svg>
-                  {{ formatDate(result.upload_date) }}
+                  {{ (result.video_views || result.views) + " 次观看" }}
                 </span>
               </div>
             </div>
           </div>
-          <!-- 文件项 -->
-          <div v-else class="file-card">
-            <div class="thumbnail-container">
-              <img
-                v-if="result.thumbnailUrl"
-                :src="result.thumbnailUrl"
-                class="thumbnail"
-                :alt="result.name"
-                loading="lazy"
-              />
-              <div v-else class="thumbnail placeholder">
-                <svg viewBox="0 0 24 24" width="24" height="24">
-                  <path
-                    fill="currentColor"
-                    d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6z"
-                  />
-                </svg>
-              </div>
-              <div v-if="result.duration" class="duration-badge">
-                {{ result.duration }}
-              </div>
-            </div>
+          <div class="file-info">
+            <h3 class="file-name">{{ result.video_title || result.name }}</h3>
             <div class="file-details">
-              <div class="file-name">{{ result.name }}</div>
-              <div class="file-meta">
-                <span v-if="result.author" class="author">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
-                    <path
-                      fill="currentColor"
-                      d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                    />
-                  </svg>
-                  {{ result.author }}
-                </span>
-                <span v-if="result.views" class="views">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
-                    <path
-                      fill="currentColor"
-                      d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
-                    />
-                  </svg>
-                  {{ result.views }} 次观看
-                </span>
-                <span v-if="result.Size" class="size">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
-                    <path
-                      fill="currentColor"
-                      d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm-2 16c-2.05 0-3.81-1.24-4.58-3h1.71c.63.9 1.68 1.5 2.87 1.5 1.93 0 3.5-1.57 3.5-3.5S13.93 9.5 12 9.5c-1.35 0-2.52.78-3.1 1.9l1.6 1.6h-4V9l1.3 1.3C8.69 8.92 10.23 8 12 8c2.76 0 5 2.24 5 5s-2.24 5-5 5z"
-                    />
-                  </svg>
-                  {{ formatSize(result.Size) }}
-                </span>
-                <span v-if="result.LastModified" class="date">
-                  <svg viewBox="0 0 24 24" width="14" height="14">
-                    <path
-                      fill="currentColor"
-                      d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"
-                    />
-                  </svg>
-                  {{ formatDate(result.LastModified) }}
-                </span>
-              </div>
+              <span class="file-size">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                {{ formatSize(result.Size) }}
+              </span>
+              <span class="file-date">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                {{ formatDate(result.LastModified || result.upload_date) }}
+              </span>
             </div>
           </div>
         </div>
@@ -397,10 +328,10 @@
                     >
                       <path
                         fill="currentColor"
-                        d="M12 5c4.063 0 7.526 2.62 8.972 6.205.4.97.4 2.091 0 3.09C19.526 18.38 16.063 21 12 21s-7.526-2.62-8.972-6.205a4.93 4.93 0 0 1 0-3.09C4.474 7.62 7.937 5 12 5zm0 2c-3.013 0-5.612 1.82-6.919 4.5a5.03 5.03 0 0 0 0 2.999C6.388 15.18 8.987 17 12 17s5.612-1.82 6.919-4.5a5.03 5.03 0 0 0 0-2.999C17.612 8.82 15.013 7 12 7zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm0 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"
+                        d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
                       />
                     </svg>
-                    {{ file.views }}
+                    {{ file.views + " 次观看" }}
                   </span>
                 </div>
               </div>
