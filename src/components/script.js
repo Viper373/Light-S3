@@ -345,7 +345,7 @@ export default {
                 // 如果是从视频元数据搜索结果点击的，需要查找对应的视频文件
                 if (videoMetadata.type === "video" && !videoMetadata.videoUrl) {
                     // 首先尝试在缓存中查找视频文件
-                    let videoFile = null;
+                    // let videoFile = null; // 移除未使用的变量声明
                     
                     // 构建可能的视频路径，确保添加正确的文件扩展名
                     let possibleKey = `${author}/${videoTitle}`;
@@ -378,6 +378,9 @@ export default {
                     this.videoPlayerVisible = true;
                     return;
                 }
+                
+                // 声明videoFile变量在这里，确保后续代码可以使用
+                let videoFile = null;
                 
                 // 首先在作者目录中查找
                 if (author) {
