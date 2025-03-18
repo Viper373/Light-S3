@@ -409,6 +409,7 @@ export default {
                     const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                     const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
                     const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                    // 直接使用视频文件的完整Key构建URL，不添加固定前置路径
                     const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(possibleKey);
                     
                     // 使用与handleFileClick相同的对象结构
@@ -469,6 +470,7 @@ export default {
                     const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                     const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
                     const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                    // 直接使用视频文件的完整Key构建URL，不添加固定前置路径
                     // 确保使用完整的Key路径生成URL
                     videoFile.videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(videoFile.Key);
                     console.log("生成视频URL:", videoFile.videoUrl, "原始Key:", videoFile.Key);
@@ -501,6 +503,7 @@ export default {
                                     const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                                     const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
                                     const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                                    // 直接使用视频文件的完整Key构建URL，不添加固定前置路径
                                     videoFile.videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(videoFile.Key);
                                 }
                                 this.currentVideo = {
@@ -626,6 +629,7 @@ export default {
                         const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
                         const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
                         const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                        // 直接使用视频文件的完整Key构建URL，不添加固定前置路径
                         const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(file.Key);
                         return {
                             Key: file.Key,
