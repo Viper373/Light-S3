@@ -1,8 +1,18 @@
 <template>
   <div class="container">
-    <div v-if="loading" class="loading">加载中...</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
-    <S3Browser v-else/>
+    <div
+      v-if="loading"
+      class="loading"
+    >
+      加载中...
+    </div>
+    <div
+      v-else-if="error"
+      class="error"
+    >
+      {{ error }}
+    </div>
+    <S3Browser v-else />
   </div>
 </template>
 
