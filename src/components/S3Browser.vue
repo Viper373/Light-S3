@@ -156,6 +156,25 @@
             </div>
             <div class="file-info">
               <h3 class="file-name">{{ dir.name }}</h3>
+              <div class="folder-meta">
+                <div class="file-count">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  {{ getDirectoryFileCount(dir.Key) }} 个文件
+                </div>
+                <div class="latest-update">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  {{ getDirectoryLatestUpdate(dir.Key) }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -282,6 +301,27 @@
             </div>
             <div class="file-info">
               <h3 class="file-name">{{ file.name }}</h3>
+              <div class="folder-meta">
+                <div class="file-count">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  <span v-if="file.fileCount !== undefined">{{ file.fileCount }} 个文件</span>
+                  <span v-else>加载中...</span>
+                </div>
+                <div class="latest-update">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <span v-if="file.latestUpdate">{{ file.latestUpdate }}</span>
+                  <span v-else>加载中...</span>
+                </div>
+              </div>
             </div>
           </div>
           <!-- 文件项 -->
@@ -330,7 +370,7 @@
                           d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
                       />
                     </svg>
-                    {{ file.views + " 次观看" }}
+                    {{ file.views }}
                   </span>
                 </div>
               </div>
@@ -415,6 +455,24 @@
     
     <!-- 页脚 -->
     <footer class="footer">
+      <div class="stats-container">
+        <div class="stat-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>访客人数: {{ visitStats.uniqueVisitors }}</span>
+        </div>
+        <div class="stat-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          <span>访问量: {{ visitStats.totalVisits }}</span>
+        </div>
+      </div>
       <p class="copyright">微光小溪·S4丨小暮笙©2025</p>
     </footer>
   </div>

@@ -1,6 +1,6 @@
 import logging
 import os
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_cache import FastAPICache
@@ -14,6 +14,13 @@ logger = logging.getLogger(__name__)
 
 # 定义全局变量
 video_metadata = {}
+
+# 访问统计变量
+visit_stats = {
+    "total_visits": 0,  # 总访问量
+    "unique_visitors": set(),  # 唯一访客IP集合
+    "last_reset": None  # 上次重置时间
+}
 
 # 连接 MongoDB
 try:
@@ -389,6 +396,25 @@ async def search_videos(q: str = Query(...)):
         logger.error(f"处理搜索请求时出错: {error_msg}")
         return {"status": "error", "message": error_msg}
 
+
+# 添加访问统计API
+@api_router.get("/stats")
+async def get_stats(request: Request):
+    # 增加总访问量
+    visit_stats["total_visits"] += 1
+    
+    # 记录唯一访客IP
+    client_ip = request.client.host
+    visit_stats["unique_visitors"].add(client_ip)
+    
+    # 返回统计数据
+    return {
+        "status": "success",
+        "data": {
+            "total_visits": visit_stats["total_visits"],
+            "unique_visitors": len(visit_stats["unique_visitors"])
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn

@@ -736,6 +736,31 @@ body.dark-mode .back-to-top-button {
     font-size: 0.875rem;
 }
 
+.stats-container {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    background-color: var(--bg-light);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.stat-item svg {
+    width: 18px;
+    height: 18px;
+    color: var(--primary-color);
+}
+
 .copyright {
     font-size: 1rem;
     font-weight: 500;

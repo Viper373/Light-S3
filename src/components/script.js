@@ -48,6 +48,10 @@ export default {
             authorDirectories: [],
             videoFiles: [],
             showBackToTop: false,
+            visitStats: {
+                totalVisits: 0,
+                uniqueVisitors: 0
+            }
         };
     },
 
@@ -73,6 +77,7 @@ export default {
         window.addEventListener("mouseup", this.handleMouseButtons);
         this.initPathFromUrl();
         await this.loadInitialData();
+        await this.loadVisitStats();
     },
 
     mounted() {
@@ -101,28 +106,89 @@ export default {
         },
         
         // 获取目录中的文件数量
-        getDirectoryFileCount(dirKey) {
+        async getDirectoryFileCount(dirKey) {
             // 确保目录键以斜杠结尾
             const dirPath = dirKey.endsWith("/") ? dirKey : dirKey + "/";
+            
+            // 如果目录缓存中有该目录，直接返回缓存的文件数量
             if (this.directoryCache[dirPath]) {
                 // 只计算非目录的文件
                 return this.directoryCache[dirPath].filter(f => !f.IsDirectory).length;
             }
-            // 如果目录缓存中没有该目录，尝试从视频元数据中获取
-            if (this.videoMetadataByAuthor) {
-                // 从dirKey中提取作者名称
-                const authorName = dirKey.split('/')[0];
-                if (this.videoMetadataByAuthor[authorName]) {
-                    return this.videoMetadataByAuthor[authorName].length;
+            
+            // 如果目录缓存中没有该目录，尝试从S3直接获取
+            try {
+                // 构建S3请求参数
+                const command = new ListObjectsV2Command({
+                    Bucket: process.env.VUE_APP_S3_BUCKET,
+                    Prefix: dirPath,
+                    Delimiter: "/",
+                });
+                
+                // 发送请求获取目录内容
+                const s3Response = await this.s3Client.send(command);
+                
+                // 处理目录和文件
+                const dirs = (s3Response.CommonPrefixes || []).map((prefix) => {
+                    const parts = prefix.Prefix.split("/").filter((p) => p);
+                    return {
+                        Key: prefix.Prefix,
+                        IsDirectory: true,
+                        name: parts[parts.length - 1] || "",
+                        author: parts.length > 1 ? parts[parts.length - 2] : ""
+                    };
+                });
+                
+                const files = (s3Response.Contents || [])
+                    .filter((file) => !file.Key.endsWith("/"))
+                    .map((file) => {
+                        const parts = file.Key.split("/").filter((p) => p);
+                        const fileName = parts.pop() || "";
+                        return {
+                            Key: file.Key,
+                            IsDirectory: false,
+                            name: fileName.replace(/\.[^.]+$/, ""),
+                            author: parts[parts.length - 1] || "",
+                            Size: file.Size,
+                            LastModified: file.LastModified?.toISOString()
+                        };
+                    });
+                
+                // 将结果缓存到directoryCache中
+                this.directoryCache[dirPath] = [...dirs, ...files];
+                
+                // 返回文件数量（不包括目录）
+                return files.length;
+            } catch (error) {
+                console.error("获取目录文件数量失败:", error);
+                
+                // 如果S3请求失败，尝试从视频元数据中获取
+                if (this.videoMetadataByAuthor) {
+                    // 从dirKey中提取作者名称
+                    const authorName = dirKey.split('/')[0];
+                    if (this.videoMetadataByAuthor[authorName]) {
+                        return this.videoMetadataByAuthor[authorName].length;
+                    }
+                    
+                    // 尝试检查是否是完整路径中的作者名称
+                    const pathParts = dirKey.split('/');
+                    for (const part of pathParts) {
+                        if (part && this.videoMetadataByAuthor[part]) {
+                            return this.videoMetadataByAuthor[part].length;
+                        }
+                    }
                 }
+                
+                return 0;
             }
-            return 0;
         },
         
         // 获取目录中最近的更新日期
-        getDirectoryLatestUpdate(dirKey) {
+        async getDirectoryLatestUpdate(dirKey) {
             // 确保目录键以斜杠结尾
             const dirPath = dirKey.endsWith("/") ? dirKey : dirKey + "/";
+            
+            // 如果目录缓存中有该目录，直接返回缓存的最新更新日期
             if (this.directoryCache[dirPath]) {
                 // 过滤出非目录文件并按日期排序
                 const files = this.directoryCache[dirPath].filter(f => !f.IsDirectory && f.LastModified);
@@ -135,6 +201,71 @@ export default {
                     return this.formatDate(files[0].LastModified);
                 }
             }
+            
+            // 如果目录缓存中没有该目录，尝试从S3直接获取
+            try {
+                // 构建S3请求参数
+                const command = new ListObjectsV2Command({
+                    Bucket: process.env.VUE_APP_S3_BUCKET,
+                    Prefix: dirPath,
+                    Delimiter: "/",
+                });
+                
+                // 发送请求获取目录内容
+                const s3Response = await this.s3Client.send(command);
+                
+                // 过滤出非目录文件
+                const files = (s3Response.Contents || [])
+                    .filter(file => !file.Key.endsWith("/"));
+                
+                if (files.length > 0) {
+                    // 按日期降序排序
+                    files.sort((a, b) => {
+                        return new Date(b.LastModified) - new Date(a.LastModified);
+                    });
+                    // 返回最新的日期
+                    return this.formatDate(files[0].LastModified);
+                }
+                
+                // 如果没有找到文件，尝试从视频元数据中获取
+                if (this.videoMetadataByAuthor) {
+                    // 从dirKey中提取作者名称
+                    const authorName = dirKey.split('/')[0];
+                    if (this.videoMetadataByAuthor[authorName]) {
+                        // 查找该作者的最新视频上传日期
+                        const videos = this.videoMetadataByAuthor[authorName];
+                        if (videos.length > 0) {
+                            // 按上传日期排序
+                            videos.sort((a, b) => {
+                                return new Date(b.upload_date || 0) - new Date(a.upload_date || 0);
+                            });
+                            // 返回最新的日期
+                            if (videos[0].upload_date) {
+                                return this.formatDate(videos[0].upload_date);
+                            }
+                        }
+                    }
+                    
+                    // 尝试检查是否是完整路径中的作者名称
+                    const pathParts = dirKey.split('/');
+                    for (const part of pathParts) {
+                        if (part && this.videoMetadataByAuthor[part]) {
+                            const videos = this.videoMetadataByAuthor[part];
+                            if (videos.length > 0) {
+                                videos.sort((a, b) => {
+                                    return new Date(b.upload_date || 0) - new Date(a.upload_date || 0);
+                                });
+                                if (videos[0].upload_date) {
+                                    return this.formatDate(videos[0].upload_date);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("获取目录最新更新日期失败:", error);
+            }
+            
             return "暂无更新";
         },
         initializeS3Client() {
@@ -185,10 +316,11 @@ export default {
                 // 合并结果
                 const allResults = [...s3Results, ...metadataResults];
                 
-                // 分离作者目录和视频文件
+                // 分离作者目录和普通目录
                 this.authorDirectories = allResults.filter(result => 
                     result.IsDirectory || 
-                    (result.author && !result.video_title && !result.Key)
+                    (result.author && !result.video_title && !result.Key) ||
+                    result.type === 'directory'
                 );
                 
                 this.videoFiles = allResults.filter(result => 
@@ -343,6 +475,14 @@ export default {
                 this.searchAndPlayVideo(result);
                 // 不清除搜索状态，保持在搜索结果页
             } else {
+                // 确保视频文件有正确的URL
+                if (!result.videoUrl && result.Key) {
+                    const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
+                    const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
+                    const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                    // 直接使用视频文件的完整Key构建URL
+                    result.videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(result.Key);
+                }
                 this.handleFileClick(result);
                 // 不清除搜索状态，保持在搜索结果页
             }
@@ -623,12 +763,19 @@ export default {
                 const s3Response = await this.s3Client.send(command);
                 const dirs = (s3Response.CommonPrefixes || []).map((prefix) => {
                     const parts = prefix.Prefix.split("/").filter((p) => p);
-                    return {
+                    const dirObj = {
                         Key: prefix.Prefix,
                         IsDirectory: true,
                         name: parts[parts.length - 1] || "",
                         author: parts.length > 1 ? parts[parts.length - 2] : "",
+                        fileCount: undefined,
+                        latestUpdate: undefined
                     };
+                    
+                    // 异步获取目录信息
+                    this.loadDirectoryInfo(dirObj);
+                    
+                    return dirObj;
                 });
                 const files = (s3Response.Contents || [])
                     .filter((file) => !file.Key.endsWith("/"))
@@ -926,6 +1073,72 @@ export default {
                 }
             } catch (error) {
                 console.error("预加载作者目录信息失败:", error);
+            }
+        },
+        
+        // 异步加载目录信息（文件数量和最新更新日期）
+        async loadDirectoryInfo(dirObj) {
+            if (!dirObj || !dirObj.Key) return;
+            
+            try {
+                // 获取目录文件数量
+                const fileCount = await this.getDirectoryFileCount(dirObj.Key);
+                dirObj.fileCount = fileCount;
+                
+                // 获取目录最新更新日期
+                const latestUpdate = await this.getDirectoryLatestUpdate(dirObj.Key);
+                dirObj.latestUpdate = latestUpdate;
+                
+                // 强制更新视图
+                this.$forceUpdate();
+                
+                // 如果是作者目录，尝试从视频元数据中获取更多信息
+                if (dirObj.author && this.videoMetadataByAuthor && this.videoMetadataByAuthor[dirObj.author]) {
+                    // 已经有作者信息，直接使用
+                    if (dirObj.fileCount === 0 || dirObj.fileCount === undefined) {
+                        dirObj.fileCount = this.videoMetadataByAuthor[dirObj.author].length;
+                    }
+                    
+                    if (!dirObj.latestUpdate || dirObj.latestUpdate === "暂无更新") {
+                        const videos = this.videoMetadataByAuthor[dirObj.author];
+                        if (videos && videos.length > 0) {
+                            // 按上传日期排序
+                            videos.sort((a, b) => {
+                                return new Date(b.upload_date || 0) - new Date(a.upload_date || 0);
+                            });
+                            // 返回最新的日期
+                            if (videos[0].upload_date) {
+                                dirObj.latestUpdate = this.formatDate(videos[0].upload_date);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("加载目录信息失败:", error);
+            }
+        },
+        
+        // 加载访问统计数据
+        async loadVisitStats() {
+            try {
+                const baseUrl = process.env.NODE_ENV === "development" ? "" : window.location.origin;
+                const apiUrl = `${baseUrl}/api/stats`;
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                if (data.status === "success" && data.data) {
+                    this.visitStats = {
+                        totalVisits: data.data.total_visits,
+                        uniqueVisitors: data.data.unique_visitors
+                    };
+                    console.log("访问统计数据加载成功:", this.visitStats);
+                }
+            } catch (error) {
+                console.error("加载访问统计数据失败:", error);
             }
         },
     },
