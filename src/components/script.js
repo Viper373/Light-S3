@@ -702,67 +702,10 @@ export default {
 
         async loadInitialData() {
             try {
-                // 首先加载根目录和视频元数据
+                // 加载根目录和视频元数据
                 await Promise.all([this.loadFileList(), this.loadAllVideoMetadata()]);
                 
-                // 预加载所有作者目录，以便在首页搜索时能够找到作者目录
-                if (this.directoryCache[""] && this.directoryCache[""].length > 0) {
-                    const authorDirs = this.directoryCache[""].filter(f => f.IsDirectory);
-                    
-                    // 确保将作者目录添加到搜索结果中
-                    authorDirs.forEach(dir => {
-                        // 确保目录对象有正确的属性
-                        if (!dir.path) dir.path = "";
-                        if (!dir.type) dir.type = "directory";
-                    });
-                    
-                    // 限制并发请求数量，每次处理5个目录
-                    for (let i = 0; i < authorDirs.length; i += 5) {
-                        const batch = authorDirs.slice(i, i + 5);
-                        await Promise.all(
-                            batch.map(dir => {
-                                const dirPath = dir.Key;
-                                if (!this.directoryCache[dirPath]) {
-                                    // 临时保存当前路径
-                                    const currentPathBackup = this.currentPath;
-                                    // 设置当前路径为作者目录
-                                    this.currentPath = dirPath;
-                                    // 加载作者目录内容
-                                    return this.loadFileList().then(() => {
-                                        // 恢复当前路径
-                                        this.currentPath = currentPathBackup;
-                                    });
-                                }
-                                return Promise.resolve();
-                            })
-                        );
-                        // 添加小延迟，避免请求过于频繁
-                        if (i + 5 < authorDirs.length) {
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                        }
-                    }
-                }
-                
-                // 从视频元数据中提取作者信息，确保即使S3中没有对应目录也能搜索到作者
-                if (this.videoMetadataByAuthor) {
-                    for (const author in this.videoMetadataByAuthor) {
-                        // 检查是否已经有这个作者的目录
-                        const authorDirPath = author + "/";
-                        if (!this.directoryCache[authorDirPath] && author.trim() !== "") {
-                            // 创建一个虚拟的作者目录
-                            this.directoryCache[authorDirPath] = [
-                                {
-                                    Key: authorDirPath,
-                                    IsDirectory: true,
-                                    name: author,
-                                    path: "",
-                                    type: "directory",
-                                    author: author
-                                }
-                            ];
-                        }
-                    }
-                }
+                // 注意：已移除预加载作者目录的逻辑，以提高页面加载速度
             } catch (error) {
                 console.error("加载初始数据失败:", error);
                 this.error = `加载失败: ${error.message}`;
