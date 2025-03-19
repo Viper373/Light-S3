@@ -308,19 +308,34 @@ export default {
 
         handleSearchResultClick(result) {
             if (result.IsDirectory) {
-                // 修改：直接使用handleFileClick处理目录点击，确保行为一致
+                // 修改：处理作者目录点击，确保使用正确的URL格式
                 let newPath;
                 if (result.Key) {
-                    // 如果有完整的Key，直接使用
-                    newPath = result.Key;
+                    // 如果是作者目录，使用正确的路径格式
+                    if (result.author && !result.Key.includes("XOVideos/")) {
+                        // 构建正确的作者目录路径，包含XOVideos前缀
+                        newPath = `XOVideos/videos/pornhub/${result.author}/`;
+                    } else {
+                        // 其他目录使用原始Key
+                        newPath = result.Key;
+                    }
                 } else {
                     // 否则从path和name构建
-                    newPath = result.path + (result.path.endsWith("/") ? "" : "/") + result.name;
+                    const baseName = result.name || "";
+                    // 检查是否为作者目录
+                    if (result.author && result.author === baseName) {
+                        // 构建正确的作者目录路径
+                        newPath = `XOVideos/videos/pornhub/${baseName}/`;
+                    } else {
+                        // 其他目录使用常规路径构建
+                        newPath = result.path + (result.path.endsWith("/") ? "" : "/") + baseName;
+                    }
                 }
                 // 创建一个符合handleFileClick期望的对象
                 const dirObject = {
                     Key: newPath,
-                    IsDirectory: true
+                    IsDirectory: true,
+                    author: result.author
                 };
                 this.handleFileClick(dirObject);
                 this.clearSearch();
@@ -705,7 +720,8 @@ export default {
                 // 加载根目录和视频元数据
                 await Promise.all([this.loadFileList(), this.loadAllVideoMetadata()]);
                 
-                // 注意：已移除预加载作者目录的逻辑，以提高页面加载速度
+                // 预加载所有作者目录信息
+                await this.preloadAuthorDirectories();
             } catch (error) {
                 console.error("加载初始数据失败:", error);
                 this.error = `加载失败: ${error.message}`;
@@ -740,7 +756,26 @@ export default {
             // 只有当路径不为空时才添加path参数，保持根路径URL干净
             const newUrl = new URL(window.location.href);
             if (this.currentPath && this.currentPath !== "") {
-                newUrl.searchParams.set("path", this.currentPath);
+                // 确保使用正确的URL格式
+                // 检查当前域名是否为s4.viper3.top
+                const isS4Domain = window.location.hostname === "s4.viper3.top";
+                
+                // 如果是s4.viper3.top域名，确保路径使用正确的格式
+                if (isS4Domain) {
+                    // 如果路径不包含XOVideos前缀但包含作者名称，添加正确的前缀
+                    const pathParts = this.currentPath.split('/').filter(p => p);
+                    if (pathParts.length > 0 && !this.currentPath.includes("XOVideos/") && 
+                        this.videoMetadataByAuthor && this.videoMetadataByAuthor[pathParts[0]]) {
+                        // 这是一个作者目录，使用正确的路径格式
+                        newUrl.searchParams.set("path", `XOVideos/videos/pornhub/${pathParts[0]}/`);
+                    } else {
+                        // 使用原始路径
+                        newUrl.searchParams.set("path", this.currentPath);
+                    }
+                } else {
+                    // 其他域名使用原始路径
+                    newUrl.searchParams.set("path", this.currentPath);
+                }
             } else {
                 // 如果是根路径，移除path参数
                 newUrl.searchParams.delete("path");
@@ -750,7 +785,17 @@ export default {
 
         handleFileClick(file) {
             if (file.IsDirectory) {
-                const newPath = file.Key.replace(/\/?$/, "/");
+                // 处理目录点击，确保使用正确的URL格式
+                let newPath = file.Key.replace(/\/?$/, "/");
+                
+                // 检查是否为作者目录，并确保使用正确的路径格式
+                if (file.author && file.Key.split('/').length <= 2) {
+                    // 如果是作者目录且不包含XOVideos前缀，添加正确的路径前缀
+                    if (!newPath.includes("XOVideos/")) {
+                        newPath = `XOVideos/videos/pornhub/${file.author}/`;
+                    }
+                }
+                
                 this.updateHistory(newPath);
                 this.currentPath = newPath;
             } else {
@@ -813,6 +858,75 @@ export default {
             this.updateHistory(newPath);
             this.currentPath = newPath;
             this.clearSearch(); // 添加清除搜索的逻辑
+        },
+        
+        // 预加载所有作者目录信息
+        async preloadAuthorDirectories() {
+            try {
+                // 如果已经有视频元数据，从中提取作者信息
+                if (this.videoMetadataByAuthor && Object.keys(this.videoMetadataByAuthor).length > 0) {
+                    console.log("开始预加载作者目录信息...");
+                    
+                    // 获取所有作者
+                    const authors = Object.keys(this.videoMetadataByAuthor);
+                    
+                    // 为每个作者创建目录信息
+                    for (const author of authors) {
+                        // 构建作者目录路径
+                        const authorPath = `XOVideos/videos/pornhub/${author}/`;
+                        const authorPathSimple = `${author}/`;
+                        
+                        // 如果目录缓存中已有该作者目录，跳过
+                        if (this.directoryCache[authorPath] || this.directoryCache[authorPathSimple]) {
+                            continue;
+                        }
+                        
+                        // 获取作者的视频列表
+                        const videos = this.videoMetadataByAuthor[author];
+                        
+                        // 创建作者目录的文件列表
+                        const files = videos.map(video => {
+                            const videoTitle = video.video_title || "";
+                            const fileName = videoTitle.endsWith(".mp4") ? videoTitle : `${videoTitle}.mp4`;
+                            const key = `${authorPath}${fileName}`;
+                            const simpleKey = `${author}/${fileName}`;
+                            
+                            // 生成缩略图URL
+                            const imgCdn = process.env.VUE_APP_IMG_CDN || "";
+                            const ghOwner = process.env.VUE_APP_GH_OWNER || "";
+                            const ghRepo = process.env.VUE_APP_GH_REPO || "";
+                            const thumbnailUrl = `${imgCdn}/${ghOwner}/${ghRepo}/${encodeURIComponent(author)}/${encodeURIComponent(videoTitle)}.jpg`;
+                            
+                            // 生成视频URL
+                            const s3Endpoint = process.env.VUE_APP_S3_ENDPOINT || "";
+                            const s3Domain = process.env.VUE_APP_S3_DOMAIN || "";
+                            const s3CustomDomain = process.env.VUE_APP_S3_CUSTOM_DOMAIN || s3Domain;
+                            const videoUrl = s3Endpoint.replace(s3Domain, s3CustomDomain) + "/" + encodeURIComponent(simpleKey);
+                            
+                            return {
+                                Key: key,
+                                IsDirectory: false,
+                                name: videoTitle,
+                                author: author,
+                                Size: video.Size || 104857600,
+                                LastModified: video.upload_date || new Date().toISOString(),
+                                thumbnailUrl: thumbnailUrl,
+                                videoUrl: videoUrl,
+                                views: video.video_views || 0,
+                                duration: video.duration || "N/A"
+                            };
+                        });
+                        
+                        // 将作者目录信息添加到缓存中
+                        this.directoryCache[authorPath] = files;
+                        this.directoryCache[authorPathSimple] = files;
+                    }
+                    
+                    console.log(`预加载完成，共加载 ${Object.keys(this.videoMetadataByAuthor).length} 个作者目录`);                    
+                }
+            } catch (error) {
+                console.error("预加载作者目录信息失败:", error);
+            }
         },
     },
 };
