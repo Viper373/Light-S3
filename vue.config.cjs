@@ -21,7 +21,7 @@ module.exports = {
         failOnError: false,
         lintDirtyModulesOnly: true,
         useEslintrc: false,
-        overrideConfigFile: path.resolve(__dirname, 'eslint.config.cjs'),
+        baseConfig: require('./eslint.config.cjs'),
       }),
     ],
     resolve: {

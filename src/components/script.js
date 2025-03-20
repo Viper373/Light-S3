@@ -78,7 +78,7 @@ async function performSearch(component) {
 
 async function searchS3Files(component, query) {
   let results = [];
-  for (const [path, files] of Object.entries(component.directoryCache)) {
+  for (const [files] of Object.entries(component.directoryCache)) {
     const matchedFiles = files.filter(file => {
       const fileName = file.Key.split('/').pop().toLowerCase();
       const fullPath = file.Key.toLowerCase();
@@ -207,6 +207,18 @@ async function loadFileList(component) {
         const author = parts[parts.length - 1];
         const thumbnailUrl = `${process.env.VUE_APP_IMG_CDN}/${process.env.VUE_APP_GH_OWNER}/${process.env.VUE_APP_GH_REPO}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`;
         const videoUrl = generateUrl(file.Key);
+        
+        // 从视频元数据中获取duration和views信息
+        let duration = "N/A";
+        let views = 0;
+        if (component.videoMetadataByAuthor && component.videoMetadataByAuthor[author]) {
+          const videoMeta = component.videoMetadataByAuthor[author].find(v => v.video_title === name);
+          if (videoMeta) {
+            duration = videoMeta.duration || "N/A";
+            views = videoMeta.video_views || 0;
+          }
+        }
+        
         return {
           Key: file.Key,
           IsDirectory: false,
@@ -216,6 +228,8 @@ async function loadFileList(component) {
           LastModified: file.LastModified?.toISOString(),
           thumbnailUrl,
           videoUrl,
+          duration,
+          views,
         };
       });
     component.directoryCache[component.currentPath] = [...dirs, ...files];
@@ -296,6 +310,17 @@ async function scanS3Directory(component, prefix) {
         const thumbnailUrl = `${process.env.VUE_APP_IMG_CDN}/${process.env.VUE_APP_GH_OWNER}/${process.env.VUE_APP_GH_REPO}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`;
         const videoUrl = generateUrl(file.Key);
         
+        // 从视频元数据中获取duration和views信息
+        let duration = "N/A";
+        let views = 0;
+        if (component.videoMetadataByAuthor && component.videoMetadataByAuthor[author]) {
+          const videoMeta = component.videoMetadataByAuthor[author].find(v => v.video_title === name);
+          if (videoMeta) {
+            duration = videoMeta.duration || "N/A";
+            views = videoMeta.video_views || 0;
+          }
+        }
+        
         return {
           Key: file.Key,
           IsDirectory: false,
@@ -305,6 +330,8 @@ async function scanS3Directory(component, prefix) {
           LastModified: file.LastModified?.toISOString(),
           thumbnailUrl,
           videoUrl,
+          duration,
+          views,
         };
       });
     
@@ -402,12 +429,6 @@ function navigateTo(component, index) {
   component.clearSearch();
 }
 
-function getFileType(component, fileName) {
-  const extension = fileName.split(".").pop().toLowerCase();
-  const videoExtensions = ["mp4", "webm", "ogg", "mov", "avi", "mkv"];
-  return videoExtensions.includes(extension) ? "video" : "file";
-}
-
 export default {
   data() {
     return {
@@ -462,7 +483,6 @@ export default {
   },
   methods: {
     initializeS3Client() { return initializeS3Client(this); },
-    generateUrl(key) { return generateUrl(key); },
     loadDirectoryInfo(dirKey) { return loadDirectoryInfo(this, dirKey); },
     handleSearchInput() { return handleSearchInput(this); },
     performSearch() { return performSearch(this); },
@@ -487,7 +507,6 @@ export default {
     handleMouseButtons(event) { return handleMouseButtons(this, event); },
     navigateToRoot() { return navigateToRoot(this); },
     navigateTo(index) { return navigateTo(this, index); },
-    getFileType(fileName) { return getFileType(this, fileName); },
     async fetchStats() {
       try {
         const response = await fetch(`${API_BASE_URL}/api/stats`);

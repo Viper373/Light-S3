@@ -3,9 +3,11 @@ const vue = require('eslint-plugin-vue');
 const babelParser = require('@babel/eslint-parser');
 const vueParser = require('vue-eslint-parser');
 
+// 避免使用展开操作符，直接使用vue推荐配置
 module.exports = [
   eslint.configs.recommended,
-  ...vue.configs['flat/recommended'],
+  // 使用单个配置对象替代展开操作符，避免循环引用
+  vue.configs['flat/essential'],
   {
     files: ['**/*.{js,vue}'],
     languageOptions: {
