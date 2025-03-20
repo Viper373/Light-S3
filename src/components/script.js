@@ -78,18 +78,16 @@ async function performSearch(component) {
 
 async function searchS3Files(component, query) {
   let results = [];
-  for (const [files] of Object.entries(component.directoryCache)) {
+  for (const [path, files] of Object.entries(component.directoryCache)) {
     const matchedFiles = files.filter(file => {
       const fileName = file.Key.split('/').pop().toLowerCase();
       const fullPath = file.Key.toLowerCase();
       return fileName.includes(query) || fullPath.includes(query);
     });
     
-    // 保持与正常浏览一致的结果格式
     results = [...results, ...matchedFiles];
   }
   
-  // 限制结果数量
   return results.slice(0, 50);
 }
 
