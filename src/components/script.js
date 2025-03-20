@@ -1,5 +1,9 @@
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
+// 环境检测，用于API请求URL前缀
+const isDevelopment = process.env.NODE_ENV === 'development';
+const API_BASE_URL = isDevelopment ? 'http://127.0.0.1:8000' : '';
+
 function initializeS3Client(component) {
   const region = process.env.VUE_APP_S3_REGION;
   const endpoint = process.env.VUE_APP_S3_ENDPOINT;
@@ -80,25 +84,12 @@ async function searchS3Files(component, query) {
       const fullPath = file.Key.toLowerCase();
       return fileName.includes(query) || fullPath.includes(query);
     });
-    const formattedResults = matchedFiles.map(file => {
-      const result = {
-        ...file,
-        path: path || '/',
-        type: file.IsDirectory ? 'directory' : component.getFileType(file.Key.split('/').pop()),
-      };
-      if (file.IsDirectory) {
-        result.fileCount = null;
-        result.latestUpdate = null;
-        component.loadDirectoryInfo(file.Key).then(({ fileCount, latestUpdate }) => {
-          result.fileCount = fileCount;
-          result.latestUpdate = latestUpdate;
-          component.$forceUpdate();
-        });
-      }
-      return result;
-    });
-    results = [...results, ...formattedResults];
+    
+    // 保持与正常浏览一致的结果格式
+    results = [...results, ...matchedFiles];
   }
+  
+  // 限制结果数量
   return results.slice(0, 50);
 }
 
@@ -110,17 +101,23 @@ function searchVideoMetadata(component, query) {
       const author = (video.author || "").toLowerCase();
       return title.includes(query) || author.includes(query);
     })
-    .map(video => ({
-      ...video,
-      type: "video",
-      name: video.video_title,
-      thumbnail_url: `${process.env.VUE_APP_IMG_CDN}/${process.env.VUE_APP_GH_OWNER}/${process.env.VUE_APP_GH_REPO}/${encodeURIComponent(video.author || "")}/${encodeURIComponent(video.video_title || "")}.jpg`,
-      Size: video.Size || 104857600,
-      LastModified: video.upload_date || new Date().toISOString(),
-      views: video.video_views || 0,
-      duration: video.duration || "N/A",
-      IsDirectory: false,
-    }));
+    .map(video => {
+      // 构建与正常浏览一致的视频对象格式
+      const key = `${video.author}/${video.video_title}`;
+      const videoUrl = generateUrl(key);
+      return {
+        Key: key,
+        IsDirectory: false,
+        name: video.video_title,
+        author: video.author,
+        Size: video.Size || 104857600,
+        LastModified: video.upload_date || new Date().toISOString(),
+        thumbnailUrl: `${process.env.VUE_APP_IMG_CDN}/${process.env.VUE_APP_GH_OWNER}/${process.env.VUE_APP_GH_REPO}/${encodeURIComponent(video.author || "")}/${encodeURIComponent(video.video_title || "")}.jpg`,
+        videoUrl,
+        views: video.video_views || 0,
+        duration: video.duration || "N/A"
+      };
+    });
 }
 
 function clearSearch(component) {
@@ -233,16 +230,100 @@ async function loadFileList(component) {
 
 async function loadInitialData(component) {
   try {
-    await Promise.all([component.loadFileList(), component.loadAllVideoMetadata()]);
+    await Promise.all([component.loadFileList(), component.loadAllVideoMetadata(), component.loadAllS3Data()]);
   } catch (error) {
     console.error("加载初始数据失败:", error);
     component.error = `加载失败: ${error.message}`;
   }
 }
 
+async function loadAllS3Data(component) {
+  try {
+    // 开始递归扫描所有S3目录
+    await scanS3Directory(component, "");
+    console.log("完成所有S3数据加载，目录缓存大小:", Object.keys(component.directoryCache).length);
+  } catch (error) {
+    console.error("加载所有S3数据失败:", error);
+  }
+}
+
+async function scanS3Directory(component, prefix) {
+  if (component.directoryCache[prefix] !== undefined) {
+    return; // 已经扫描过的目录不再重复扫描
+  }
+  
+  try {
+    const command = new ListObjectsV2Command({
+      Bucket: process.env.VUE_APP_S3_BUCKET,
+      Prefix: prefix,
+      Delimiter: "/",
+    });
+    
+    const s3Response = await component.s3Client.send(command);
+    
+    // 处理目录
+    const dirs = (s3Response.CommonPrefixes || []).map(prefix => {
+      const parts = prefix.Prefix.split("/").filter(p => p);
+      const dirObj = {
+        Key: prefix.Prefix,
+        IsDirectory: true,
+        name: parts[parts.length - 1] || "",
+        author: parts.length > 1 ? parts[parts.length - 2] : "",
+        fileCount: null,
+        latestUpdate: null,
+      };
+      
+      // 异步加载目录信息
+      loadDirectoryInfo(component, prefix.Prefix).then(({ fileCount, latestUpdate }) => {
+        dirObj.fileCount = fileCount;
+        dirObj.latestUpdate = latestUpdate;
+        if (component.$forceUpdate) component.$forceUpdate();
+      }).catch(err => {
+        console.error(`加载目录 ${prefix.Prefix} 信息失败:`, err);
+      });
+      
+      return dirObj;
+    });
+    
+    // 处理文件
+    const files = (s3Response.Contents || [])
+      .filter(file => !file.Key.endsWith("/"))
+      .map(file => {
+        const parts = file.Key.split("/").filter(p => p);
+        const fileName = parts.pop() || "";
+        const name = fileName.replace(/\.[^.]+$/, "");
+        const author = parts[parts.length - 1];
+        const thumbnailUrl = `${process.env.VUE_APP_IMG_CDN}/${process.env.VUE_APP_GH_OWNER}/${process.env.VUE_APP_GH_REPO}/${encodeURIComponent(author)}/${encodeURIComponent(name)}.jpg`;
+        const videoUrl = generateUrl(file.Key);
+        
+        return {
+          Key: file.Key,
+          IsDirectory: false,
+          name,
+          author,
+          Size: file.Size,
+          LastModified: file.LastModified?.toISOString(),
+          thumbnailUrl,
+          videoUrl,
+        };
+      });
+    
+    // 保存到缓存
+    component.directoryCache[prefix] = [...dirs, ...files];
+    
+    // 递归扫描子目录
+    for (const dir of dirs) {
+      await scanS3Directory(component, dir.Key);
+    }
+    
+  } catch (error) {
+    console.error(`扫描目录 ${prefix} 失败:`, error);
+  }
+}
+
 async function loadAllVideoMetadata(component) {
   try {
-    const response = await fetch("/api/xovideos");
+    const response = await fetch(`${API_BASE_URL}/api/xovideos`);
     if (!response.ok) throw new Error(`API请求失败: ${response.status}`);
     const data = await response.json();
     if (data.status === "success" && Array.isArray(data.data)) {
@@ -271,7 +352,7 @@ function handleFileClick(component, file) {
     const newPath = file.Key.replace(/\/?$/, "/");
     component.updateHistory(newPath);
     component.currentPath = newPath;
-    component.clearSearch(); // 清除搜索
+    component.clearSearch();
   } else {
     component.currentVideo = { url: file.videoUrl, title: file.name, key: file.Key };
     component.videoPlayerVisible = true;
@@ -353,6 +434,12 @@ export default {
     pathParts() {
       return this.currentPath.split("/").filter(p => p);
     },
+    searchDirectories() {
+      return this.searchResults.filter(result => result.IsDirectory);
+    },
+    searchFiles() {
+      return this.searchResults.filter(result => !result.IsDirectory);
+    },
   },
   watch: {
     currentPath() {
@@ -391,6 +478,7 @@ export default {
     loadFileList() { return loadFileList(this); },
     loadInitialData() { return loadInitialData(this); },
     loadAllVideoMetadata() { return loadAllVideoMetadata(this); },
+    loadAllS3Data() { return loadAllS3Data(this); },
     updateBrowserUrl() { return updateBrowserUrl(this); },
     handleFileClick(file) { return handleFileClick(this, file); },
     closeVideoPlayer() { return closeVideoPlayer(this); },
@@ -402,7 +490,7 @@ export default {
     getFileType(fileName) { return getFileType(this, fileName); },
     async fetchStats() {
       try {
-        const response = await fetch('/api/stats');
+        const response = await fetch(`${API_BASE_URL}/api/stats`);
         const data = await response.json();
         if (data.status === 'success') {
           this.uniqueVisitors = data.data.unique_visitors;

@@ -1,9 +1,9 @@
-import eslint from '@eslint/js';
-import vue from 'eslint-plugin-vue';
-import babelParser from '@babel/eslint-parser';
-import vueParser from 'vue-eslint-parser';
+const eslint = require('@eslint/js');
+const vue = require('eslint-plugin-vue');
+const babelParser = require('@babel/eslint-parser');
+const vueParser = require('vue-eslint-parser');
 
-export default [
+module.exports = [
   eslint.configs.recommended,
   ...vue.configs['flat/recommended'],
   {

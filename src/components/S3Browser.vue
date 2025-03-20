@@ -80,55 +80,98 @@
           关闭
         </button>
       </div>
-      <div class="video-grid">
-        <div v-for="result in searchResults" :key="result.Key"
-          :class="result.IsDirectory ? 'folder-card' : 'video-card'" @click="handleFileClick(result)">
-          <div v-if="result.IsDirectory" class="folder-icon">
-            <svg viewBox="0 0 24 24" width="48" height="48">
-              <path fill="currentColor"
-                d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-            </svg>
-          </div>
-          <div v-else class="thumbnail-container">
-            <img :src="result.thumbnail_url" class="thumbnail-image" :alt="result.name" loading="lazy">
-            <div class="video-overlay">
-              <div class="play-indicator">
+      <div class="content-container">
+        <!-- 作者目录部分 -->
+        <div v-if="searchDirectories.length > 0" class="search-section">
+          <h3 class="section-title">作者目录 ({{ searchDirectories.length }})</h3>
+          <div class="video-grid">
+            <div v-for="file in searchDirectories" :key="file.Key" class="folder-card" @click="handleFileClick(file)">
+              <div class="folder-icon">
                 <svg viewBox="0 0 24 24" width="48" height="48">
-                  <path fill="currentColor" d="M8 5v14l11-7z" />
+                  <path fill="currentColor"
+                    d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                 </svg>
+              </div>
+              <div class="file-info">
+                <h3 class="file-name">
+                  {{ file.name }}
+                </h3>
+                <div class="folder-meta">
+                  <div class="file-count">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    <span v-if="file.fileCount !== null">视频数量 {{ file.fileCount }}</span>
+                    <span v-else>加载中...</span>
+                  </div>
+                  <div class="latest-update">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span v-if="file.latestUpdate !== null">{{ file.latestUpdate }}</span>
+                    <span v-else>加载中...</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div class="file-info">
-            <h3 class="file-name">
-              {{ result.name }}
-            </h3>
-            <div v-if="result.IsDirectory" class="folder-meta">
-              <div class="file-count">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10 9 9 9 8 9" />
-                </svg>
-                <span v-if="result.fileCount !== null">视频数量 {{ result.fileCount }}</span>
-                <span v-else>加载中...</span>
+        </div>
+
+        <!-- 视频文件部分 -->
+        <div v-if="searchFiles.length > 0" class="search-section">
+          <h3 class="section-title">视频文件 ({{ searchFiles.length }})</h3>
+          <div class="video-grid">
+            <div v-for="file in searchFiles" :key="file.Key" class="video-card" @click="handleFileClick(file)">
+              <div class="thumbnail-container">
+                <img :src="file.thumbnailUrl" class="thumbnail-image" :alt="file.name" loading="lazy">
+                <div class="video-overlay">
+                  <div class="play-indicator">
+                    <svg viewBox="0 0 24 24" width="48" height="48">
+                      <path fill="currentColor" d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                  <!-- 左上角显示作者 -->
+                  <div class="video-author">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>{{ file.author || '未知作者' }}</span>
+                  </div>
+                  <!-- 左下角显示视频时长 -->
+                  <div class="video-duration">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>{{ file.duration || 'N/A' }}</span>
+                  </div>
+                  <!-- 右下角显示观看次数 -->
+                  <div class="video-views">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <span>{{ file.views || 0 }}</span>
+                  </div>
+                </div>
               </div>
-              <div class="latest-update">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                <span v-if="result.latestUpdate !== null">{{ result.latestUpdate }}</span>
-                <span v-else>加载中...</span>
+              <div class="file-info">
+                <h3 class="file-name">
+                  {{ file.name }}
+                </h3>
+                <div class="file-details">
+                  <span class="file-size">{{ formatSize(file.Size) }}</span>
+                  <span class="file-date">{{ formatDate(file.LastModified) }}</span>
+                </div>
               </div>
-            </div>
-            <div v-else class="file-details">
-              <span class="file-size">{{ formatSize(result.Size) }}</span>
-              <span class="file-date">{{ formatDate(result.LastModified) }}</span>
             </div>
           </div>
         </div>
@@ -160,6 +203,30 @@
                   <svg viewBox="0 0 24 24" width="48" height="48">
                     <path fill="currentColor" d="M8 5v14l11-7z" />
                   </svg>
+                </div>
+                <!-- 左上角显示作者 -->
+                <div class="video-author">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <span>{{ file.author || '未知作者' }}</span>
+                </div>
+                <!-- 左下角显示视频时长 -->
+                <div class="video-duration">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <span>{{ file.duration || 'N/A' }}</span>
+                </div>
+                <!-- 右下角显示观看次数 -->
+                <div class="video-views">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <span>{{ file.views || 0 }}</span>
                 </div>
               </div>
             </div>
@@ -216,30 +283,31 @@
         </div>
       </div>
     </div>
-  </div>
-  <footer class="footer">
-    <div class="stats-container">
-      <div class="stat-item">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-        <span>访客人数: {{ uniqueVisitors }}</span>
-      </div>
-      <div class="stat-item">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-          <circle cx="12" cy="12" r="3"></circle>
-        </svg>
-        <span>访问量: {{ totalVisits }}</span>
-      </div>
-    </div>
-  </footer>
 
+    <footer class="footer">
+      <div class="stats-container">
+        <div class="stat-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>访客人数: {{ uniqueVisitors }}</span>
+        </div>
+        <div class="stat-item">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          <span>访问量: {{ totalVisits }}</span>
+        </div>
+      </div>
+      <p class="copyright">©微光小溪S4丨小暮笙@2025</p>
+    </footer>
+  </div>
 </template>
 
 <script>

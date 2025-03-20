@@ -239,15 +239,22 @@ body {
     background: rgba(255, 255, 255, 0.3);
 }
 
-.search-results .video-grid,
-.search-results .directory-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.5rem;
-    padding: 1.5rem;
+.search-section {
+    margin-bottom: 2rem;
     background-color: var(--bg-white);
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.section-title {
+    margin: 0;
+    padding: 1rem 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background-color: var(--bg-light);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .search-section {
@@ -303,7 +310,7 @@ body {
 .video-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.8) 100%);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.8) 100%);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -331,47 +338,71 @@ body {
     opacity: 1;
 }
 
-.video-meta-overlay {
+/* 视频作者样式 */
+.video-author {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 12px;
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.duration,
-.views {
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.6);
+    top: 10px;
+    left: 10px;
     display: flex;
     align-items: center;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    max-width: 60%;
 }
 
-.meta-icon {
-    margin-right: 4px;
+.video-author svg {
     width: 14px;
     height: 14px;
+    flex-shrink: 0;
 }
 
-.author-tag {
+.video-author span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 视频时长样式 */
+.video-duration {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
     background: rgba(0, 0, 0, 0.6);
-    color: white;
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.75rem;
-    font-weight: 500;
+}
+
+.video-duration svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* 视频观看次数样式 */
+.video-views {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.video-views svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 .file-info {
@@ -408,13 +439,6 @@ body {
     display: flex;
     align-items: center;
     white-space: nowrap;
-}
-
-.file-size svg,
-.file-date svg {
-    width: 16px;
-    height: 16px;
-    margin-right: 4px;
 }
 
 .breadcrumb {
@@ -569,7 +593,6 @@ body {
     transition: var(--transition);
     box-shadow: var(--shadow-sm);
     overflow: hidden;
-    /* 添加此行以裁剪移出视图的图标 */
     position: relative;
 }
 
@@ -586,7 +609,6 @@ body {
 
 .theme-toggle {
     position: relative;
-    /* 修改：与其他 action-button 保持一致的尺寸 */
     width: 40px;
     height: 40px;
 }
@@ -695,39 +717,6 @@ body.dark-mode .action-button {
     display: block;
 }
 
-.back-to-top-button {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    box-shadow: var(--shadow-md);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
-    z-index: 100;
-}
-
-.back-to-top-button:hover {
-    background: var(--primary-hover);
-    transform: translateY(-5px);
-}
-
-.back-to-top-button svg {
-    width: 24px;
-    height: 24px;
-}
-
-body.dark-mode .back-to-top-button {
-    background: #4f46e5;
-}
-
 .footer {
     margin-top: auto;
     padding: 1.5rem;
@@ -777,61 +766,6 @@ body.dark-mode .back-to-top-button {
     50% {
         opacity: 0.6;
     }
-}
-
-@media (max-width: 1200px) {
-    .video-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .s3-browser {
-        padding: 1rem;
-    }
-
-    .video-grid {
-        grid-template-columns: repeat(1, 1fr);
-        gap: 1rem;
-    }
-
-    .top-actions {
-        top: 0.5rem;
-        right: 1rem;
-    }
-}
-
-.footer {
-    margin-top: auto;
-    padding: 1.5rem;
-    text-align: center;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-}
-
-.stats-container {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    margin-bottom: 1rem;
-}
-
-.stat-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    background-color: var(--bg-light);
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-}
-
-.stat-item svg {
-    width: 18px;
-    height: 18px;
-    color: var(--primary-color);
 }
 
 @media (max-width: 1200px) {

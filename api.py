@@ -7,6 +7,9 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.decorator import cache
 from pymongo import MongoClient
+from dotenv import load_dotenv
+
+load_dotenv(".env.local")
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -65,7 +68,6 @@ async def lifespan(app: FastAPI):
             # 尝试查询原始文档结构
             sample_doc = collection.find_one()
             if sample_doc:
-                logger.info(f"集合中的文档结构: {sample_doc}")
                 
                 # 检查是否有作者视频列表字段
                 has_author_field = "作者名称" in sample_doc
@@ -85,7 +87,6 @@ async def lifespan(app: FastAPI):
                             "duration": "$作者视频列表.视频时长"
                         }}
                     ]
-                    logger.info(f"使用标准管道查询: {pipeline}")
                     
                     # 执行聚合查询
                     data = list(collection.aggregate(pipeline))
@@ -93,7 +94,6 @@ async def lifespan(app: FastAPI):
                     
                     # 添加数据样本日志
                     if data:
-                        logger.info(f"数据样本: {data[0]}")
                         
                         # 处理数据
                         for item in data:
