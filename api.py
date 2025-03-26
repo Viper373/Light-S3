@@ -18,18 +18,11 @@ logger = logging.getLogger(__name__)
 # 定义全局变量
 video_metadata = {}
 
-# 访问统计变量
-visit_stats = {
-    "total_visits": 0,  # 总访问量
-    "unique_visitors": set(),  # 唯一访客IP集合
-    "last_reset": None  # 上次重置时间
-}
-
 # 连接 MongoDB
 try:
-    mongodb_uri = os.getenv("VUE_APP_MONGODB_URI")
-    db_name = os.getenv("VUE_APP_DB_NAME")
-    col_name = os.getenv("VUE_APP_COL_NAME")
+    mongodb_uri = os.getenv("NEXT_PUBLIC_MONGODB_URI")
+    db_name = os.getenv("NEXT_PUBLIC_DB_NAME")
+    col_name = os.getenv("NEXT_PUBLIC_COL_NAME")
 
     # 添加环境变量诊断日志
     logger.info(f"MongoDB URI: {mongodb_uri and '已设置' or '未设置'}")
@@ -159,6 +152,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@api_router.get("/")
+async def root():
+    return {"message": "API 服务正常运行"}
 
 @api_router.get("/xovideos")  # 保持原有路径
 @cache(expire=7200)
@@ -247,174 +243,8 @@ async def get_videos(author: str = Query(None)):
         logger.error(f"处理请求时出错: {error_msg}")
         return {"status": "error", "message": error_msg}
 
-
-@api_router.get("/health")  # 保持原有路径
-async def health_check():
-    logger.info("健康检查请求")
-    return {"status": "healthy"}
-
-
-# 添加 MongoDB 诊断路由
-@api_router.get("/mongodb-status")
-async def mongodb_status():
-    try:
-        status = {
-            "mongodb_uri": os.getenv("VUE_APP_MONGODB_URI") and "已设置" or "未设置",
-            "db_name": os.getenv("VUE_APP_DB_NAME") and "已设置" or "未设置",
-            "col_name": os.getenv("VUE_APP_COL_NAME") and "已设置" or "未设置",
-            "connection_status": "未连接",
-            "collection_count": 0,
-            "sample_document": None,
-            "metadata_count": len(video_metadata)
-        }
-        
-        if collection is not None:
-            # 测试连接是否有效
-            try:
-                # 执行简单查询测试连接
-                collection.find_one({}, {"_id": 1})
-                status["connection_status"] = "已连接"
-                
-                # 获取文档数量
-                status["collection_count"] = collection.count_documents({})
-                
-                # 获取样本文档
-                sample_doc = collection.find_one()
-                if sample_doc:
-                    # 移除可能的敏感信息
-                    if "_id" in sample_doc:
-                        sample_doc["_id"] = str(sample_doc["_id"])
-                    status["sample_document"] = sample_doc
-                    
-                    # 检查文档结构
-                    status["document_fields"] = list(sample_doc.keys())
-                    
-                    # 检查是否有作者视频列表字段
-                    status["has_author_field"] = "作者名称" in sample_doc
-                    status["has_videos_field"] = "作者视频列表" in sample_doc
-                    
-                    # 尝试找出可能的列表字段
-                    list_fields = []
-                    for field, value in sample_doc.items():
-                        if isinstance(value, list):
-                            list_fields.append(field)
-                    status["list_fields"] = list_fields
-            except Exception as e:
-                status["connection_error"] = str(e)
-        
-        logger.info(f"MongoDB 诊断: {status}")
-        return status
-    except Exception as e:
-        logger.error(f"MongoDB 诊断失败: {str(e)}")
-        return {"status": "error", "message": str(e)}
-
-
 # 将 API 路由器挂载到主应用，添加前缀
 app.mount("/api", api_router)
-
-
-# 添加根路由，用于测试 API 是否正常工作
-@app.get("/")
-async def root():
-    return {"message": "API 服务正常运行"}
-
-
-# 在现有路由下方添加搜索路由
-@api_router.get("/xovideos/search")
-@cache(expire=3600)
-async def search_videos(q: str = Query(...)):
-    try:
-        logger.info(f"收到搜索请求: q={q}, 当前元数据条目数: {len(video_metadata)}")
-        
-        if not q.strip():
-            return {"status": "error", "message": "搜索关键词不能为空"}
-        
-        search_query = q.lower().strip()
-        
-        # 如果元数据为空，尝试直接从数据库搜索
-        if not video_metadata:
-            logger.warning("元数据为空，尝试直接从数据库搜索")
-            
-            if collection is not None:
-                try:
-                    # 构建MongoDB搜索查询
-                    query = {
-                        "$or": [
-                            {"作者名称": {"$regex": search_query, "$options": "i"}},
-                            {"作者视频列表.视频标题": {"$regex": search_query, "$options": "i"}}
-                        ]
-                    }
-                    
-                    # 直接从数据库查询
-                    docs = list(collection.find(query, {"_id": 0, "作者名称": 1, "作者视频列表": 1}))
-                    logger.info(f"搜索查询返回 {len(docs)} 条文档")
-                    
-                    result_data = []
-                    for doc in docs:
-                        current_author = doc.get("作者名称", "未知作者")
-                        if current_author == "":
-                            current_author = "未知作者"
-                            
-                        videos = doc.get("作者视频列表", [])
-                        for video in videos:
-                            title = video.get("视频标题", "")
-                            if title and (search_query in title.lower() or search_query in current_author.lower()):
-                                result_data.append({
-                                    "author": current_author,
-                                    "video_title": title,
-                                    "video_views": video.get("视频观看次数", "0"),
-                                    "duration": video.get("视频时长", "0:00")
-                                })
-                    
-                    if result_data:
-                        logger.info(f"搜索返回 {len(result_data)} 条视频数据")
-                        return {"status": "success", "data": result_data}
-                except Exception as db_error:
-                    logger.error(f"搜索数据库失败: {str(db_error)}")
-            
-            # 如果直接查询也失败，返回空结果
-            return {"status": "success", "data": []}
-        
-        # 在元数据中搜索
-        search_results = []
-        for key, value in video_metadata.items():
-            parts = key.split("/", 1)
-            if len(parts) == 2:
-                author, title = parts
-                if search_query in author.lower() or search_query in title.lower():
-                    search_results.append({
-                        "author": author,
-                        "video_title": title,
-                        "video_views": value.get("views"),
-                        "duration": value.get("duration")
-                    })
-        
-        logger.info(f"搜索返回 {len(search_results)} 条结果")
-        return {"status": "success", "data": search_results}
-    except Exception as e:
-        error_msg = str(e)
-        logger.error(f"处理搜索请求时出错: {error_msg}")
-        return {"status": "error", "message": error_msg}
-
-
-# 添加访问统计API
-@api_router.get("/stats")
-async def get_stats(request: Request):
-    # 增加总访问量
-    visit_stats["total_visits"] += 1
-    
-    # 记录唯一访客IP
-    client_ip = request.client.host
-    visit_stats["unique_visitors"].add(client_ip)
-    
-    # 返回统计数据
-    return {
-        "status": "success",
-        "data": {
-            "total_visits": visit_stats["total_visits"],
-            "unique_visitors": len(visit_stats["unique_visitors"])
-        }
-    }
 
 if __name__ == "__main__":
     import uvicorn

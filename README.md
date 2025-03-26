@@ -1,14 +1,17 @@
-# 🌈Light-S3·微光小溪
+# 🌈Light-S4·微光小溪
 
 ## 项目概述 🌟
 
-Light-S3·微光小溪是一个基于 Vue.js 和 FastAPI 的 S3 兼容存储服务浏览器，允许用户浏览、查看和管理存储在 S3 兼容存储服务中的文件，特别是视频文件。该应用提供了直观的用户界面，支持视频预览、缩略图显示和元数据展示。
+Light-S4·微光小溪是一个基于 Next.js 的 S3 兼容存储服务浏览器，允许用户浏览、查看和管理存储在 S3 兼容存储服务中的文件，特别是视频文件。该应用提供了直观的用户界面，支持视频预览、缩略图显示和元数据展示。
 
 ## 项目截图 📸
-![Light-S3·微光小溪](screenshots/demo.png)
+![Light-S4·微光小溪](screenshots/demo.png)
 
 ## 功能特点 ✨
 
+- 🏠 美观的首页设计，带有渐变背景和现代UI元素
+- 🎨 顶部导航栏，提供便捷的页面切换
+- 🌓 内置暗色/亮色模式切换功能
 - 🗂️ 文件和目录浏览
 - 🎬 视频文件在线播放
 - 🖼️ 视频缩略图预览
@@ -16,25 +19,23 @@ Light-S3·微光小溪是一个基于 Vue.js 和 FastAPI 的 S3 兼容存储服�
 - 🔄 浏览历史记录（前进/后退导航）
 - 🍞 面包屑导航
 - 🔍 与 MongoDB 集成获取视频元数据
-- 🌓 支持日间/夜间模式切换
 - 🚀 优化的API请求缓存机制
 
 ## 技术栈 🛠️
 
-- **前端框架**: Vue.js 3
-- **构建工具**: Vue CLI
+- **前端框架**: Next.js
 - **S3 客户端**: AWS SDK for JavaScript v3
 - **后端**: FastAPI (Python)
 - **数据库**: MongoDB
 - **缓存**: FastAPI Cache
-- **样式**: CSS (自定义样式)
-- **图片懒加载**: Vue-Lazyload
+- **样式**: Tailwind CSS
+- **UI组件**: 自定义组件 + Lucide React图标
 - **部署**: Vercel
 
 ## 项目结构 📂
 
 ```
-Light-S3/
+Light-S4/
 ├── .env.example          # 环境变量示例配置
 ├── .eslintrc.js          # ESLint 配置
 ├── .gitignore            # Git 忽略文件配置
@@ -45,16 +46,17 @@ Light-S3/
 ├── package.json          # NPM 包配置
 ├── requirements.txt      # Python 依赖配置
 ├── vercel.json           # Vercel 部署配置
-├── vue.config.js         # Vue CLI 配置
-├── public/               # 静态资源
-│   └── index.html        # HTML 入口文件
-└── src/                  # 源代码
-├── App.vue           # 主应用组件
-├── main.js           # 应用入口
-├── components/       # 组件目录
-│   └── S3Browser.vue # S3浏览器组件
-└── utils/            # 工具函数
-└── s3.js         # S3 工具函数
+├── file-manager.tsx      # 文件管理器组件
+├── app/                  # Next.js 应用目录
+│   ├── layout.tsx        # 全局布局组件
+│   ├── page.tsx          # 首页组件
+│   ├── globals.css       # 全局样式
+│   ├── file-manager/     # 文件管理器页面
+│   └── video-station/    # 视频站页面
+├── components/           # 共享组件
+│   └── Header.tsx        # 顶部导航栏组件
+└── screenshots/          # 截图目录
+    └── demo.png          # 演示截图
 ```
 
 ## 环境变量 🔐
@@ -63,23 +65,23 @@ Light-S3/
 
 | 变量名                      | 描述           | 示例值                               |
 |--------------------------|--------------|-----------------------------------|
-| VUE_APP_S3_ENDPOINT      | S3 服务端点      | https://s3.bitiful.net            |
-| VUE_APP_S3_REGION        | S3 区域        | cn-east-1                         |
-| VUE_APP_S3_ACCESS_KEY    | S3 访问密钥      | CYVLn8lssikCoSjACGCpqiO3gOg       |
-| VUE_APP_S3_SECRET_KEY    | S3 秘密密钥      | gEKcmCVe12aVnb5jZ10MfBh3GcYXKHMWQ |
-| VUE_APP_S3_BUCKET        | S3 存储桶名称     | viper3                            |
-| VUE_APP_S3_DOMAIN        | S3 初始访问域名    | viper3.s3.bitiful.net             |
-| VUE_APP_S3_CUSTOM_DOMAIN | S3自定义域名      | bitiful.viper3.top                |
-| VUE_APP_IMG_CDN          | 图床CDN        | https://cdn.jsdelivr.net/gh       |
-| VUE_APP_GH_OWNER         | Github用户名    | Viper373                          |
-| VUE_APP_GH_REPO          | 图床Github仓库名称 | picx-images-hosting               |
-| VUE_APP_MONGODB_URI      | MongoDB连接URI | mongodb://localhost:27017/        |
-| VUE_APP_DB_NAME          | 数据库名称        | XOVideos                          |
-| VUE_APP_COL_NAME         | 集合名称         | pornhub                           |
+| NEXT_PUBLIC_S3_ENDPOINT      | S3 服务端点      | https://s3.bitiful.net            |
+| NEXT_PUBLIC_S3_REGION        | S3 区域        | cn-east-1                         |
+| NEXT_PUBLIC_S3_ACCESS_KEY    | S3 访问密钥      | CYVLn8lssikCoSjACGCpqiO3gOg       |
+| NEXT_PUBLIC_S3_SECRET_KEY    | S3 秘密密钥      | gEKcmCVe12aVnb5jZ10MfBh3GcYXKHMWQ |
+| NEXT_PUBLIC_S3_BUCKET        | S3 存储桶名称     | viper3                            |
+| NEXT_PUBLIC_S3_DOMAIN        | S3 初始访问域名    | viper3.s3.bitiful.net             |
+| NEXT_PUBLIC_S3_CUSTOM_DOMAIN | S3自定义域名      | bitiful.viper3.top                |
+| NEXT_PUBLIC_IMG_CDN          | 图床CDN        | https://cdn.jsdelivr.net/gh       |
+| NEXT_PUBLIC_GH_OWNER         | Github用户名    | Viper373                          |
+| NEXT_PUBLIC_GH_REPO          | 图床Github仓库名称 | picx-images-hosting               |
+| MONGODB_URI      | MongoDB连接URI | mongodb://localhost:27017/        |
+| DB_NAME          | 数据库名称        | XOVideos                          |
+| COL_NAME         | 集合名称         | pornhub                           |
 
 ## Vercel部署 🚀
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Viper373/Light-S3)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Viper373/Light-S4)
 
 点击上方的"Deploy with Vercel"按钮，可以一键将项目部署到Vercel平台。
 部署后，您可以通过以下路径访问不同的服务：
@@ -99,29 +101,26 @@ Light-S3/
 
 ```bash
 # 克隆仓库
-git clone https://github.com/Viper373/Light-S3.git
-cd Light-S3
+git clone https://github.com/Viper373/Light-S4.git
+cd Light-S4
 
 # 创建并配置环境变量
-# 在本地创建 `.env.local` 文件，并添加必要的环境变量（参考.env.example）
+# 在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
 
 # 安装依赖并启动前端服务
 npm install
-npm run serve
-## Vercel部署 🚀
+npm run dev
+```
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Viper373/S3Browser)
+### 后端部署
 
-点击上方的"Deploy with Vercel"按钮，可以一键将项目部署到Vercel平台。
-部署后，您可以通过以下路径访问不同的服务：
+```bash
+# 安装依赖
+pip install -r requirements.txt
 
-- **前端应用**: `https://your-vercel-domain.vercel.app/`
-- **API服务**: `https://your-vercel-domain.vercel.app/api/`
-  在Vercel部署时，需要配置以下环境变量：
-
-1. 在Vercel项目设置中，找到"Environment Variables"部分
-2. 添加所有必要的环境变量（参考上面的环境变量表）
-3. 确保敏感信息（如S3密钥和MongoDB URI）已正确设置
+# 运行后端服务（端口 8000）
+uvicorn api:app --reload --port 8000
+```
 
 ## 私有部署 🚀
 
@@ -131,11 +130,14 @@ npm run serve
 # 安装依赖
 npm install
 
-# 开发模式运行（端口 8888）
-npm run serve
+# 开发模式运行
+npm run dev
 
 # 构建生产版本
 npm run build
+
+# 启动生产服务
+npm run start
 ```
 
 ### 后端
@@ -145,34 +147,7 @@ npm run build
 pip install -r requirements.txt
 
 # 运行后端服务（端口 8000）
-uvicorn app:app
-```
-
-### 本地开发环境部署
-
-#### 前端部署
-
-```bash
-# 克隆仓库
-git clone https://github.com/Viper373/Light-S3.git
-cd Light-S3
-
-# 创建并配置环境变量
-# 在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
-# 安装依赖并启动前端服务
-npm install
-npm run serve
-```
-
-#### 后端部署
-
-```bash
-# 安装依赖
-pip install -r requirements.txt
-
-# 运行后端服务（端口 8000）
-uvicorn app:app --reload --port 8000
-
+uvicorn api:app
 ```
 
 ## API 接口说明 📚
