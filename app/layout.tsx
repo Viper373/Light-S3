@@ -13,20 +13,21 @@ export const metadata: Metadata = {
   title: '🌈 Light-S4·微光小溪',
   description: '基于 Next.js 的 S3 兼容存储服务浏览器，提供直观的用户界面浏览、查看和管理存储在 S3 兼容存储服务中的文件。',
   manifest: '/manifest.json',
-  themeColor: '#3b82f6',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Light-S4'
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
   icons: {
     apple: '/icons/icon-192x192.png',
   }
+}
+
+export const viewport = {
+  themeColor: '#3b82f6',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({
