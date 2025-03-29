@@ -103,7 +103,7 @@ Light-S4/
 
 ### 部署到 Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FViper373%2FLightS4&env=NEXT_PUBLIC_S3_ENDPOINT,NEXT_PUBLIC_S3_REGION,NEXT_PUBLIC_S3_ACCESS_KEY,NEXT_PUBLIC_S3_SECRET_KEY,NEXT_PUBLIC_S3_BUCKET,NEXT_PUBLIC_IMG_CDN,NEXT_PUBLIC_GH_OWNER,NEXT_PUBLIC_GH_REPO,NEXT_PUBLIC_MONGODB_URI,NEXT_PUBLIC_DB_NAME,NEXT_PUBLIC_COL_NAME&project-name=LightS4&repository-name=LightS4)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FViper373%2FLightS4&env=NEXT_PUBLIC_S3_ENDPOINT,NEXT_PUBLIC_S3_REGION,NEXT_PUBLIC_S3_ACCESS_KEY,NEXT_PUBLIC_S3_SECRET_KEY,NEXT_PUBLIC_S3_BUCKET,NEXT_PUBLIC_IMG_CDN,NEXT_PUBLIC_GH_OWNER,NEXT_PUBLIC_GH_REPO,NEXT_PUBLIC_MONGODB_URI,NEXT_PUBLIC_DB_NAME,NEXT_PUBLIC_COL_NAME&project-name=light-s4&repository-name=LightS4)
 
 ### 环境要求
 - **Node.js** 20.0 或更高版本
