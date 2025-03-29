@@ -1,243 +1,286 @@
-# 🌈Light-S4·微光小溪
+# 🌈 Light-S4·微光小溪
 
-## 项目概述 🌟
+<div align="center">
+  <img src="public/icon-192x192.png" alt="微光小溪 Logo" width="120"/>
+  <p>优雅而强大的 S3 兼容存储服务浏览器</p>
+  <p>
+    <a href="https://github.com/Viper373/Light-S4/blob/main/LICENSE">
+      <img src="https://img.shields.io/github/license/Viper373/Light-S4" alt="license"/>
+    </a>
+    <a href="https://github.com/Viper373/Light-S4/releases">
+      <img src="https://img.shields.io/github/v/release/Viper373/Light-S4" alt="release"/>
+    </a>
+    <a href="https://github.com/Viper373/Light-S4/issues">
+      <img src="https://img.shields.io/github/issues/Viper373/Light-S4" alt="issues"/>
+    </a>
+  </p>
+</div>
 
-Light-S4·微光小溪是一个基于 Next.js 的 S3 兼容存储服务浏览器，允许用户浏览、查看和管理存储在 S3 兼容存储服务中的文件，特别是视频文件。该应用提供了直观的用户界面，支持视频预览、缩略图显示和元数据展示。
+## 🌟 项目概述
 
-## 项目截图 📸
-![Light-S4·微光小溪](screenshots/demo.png)
+Light-S4·微光小溪是一个基于 Next.js 的现代化 S3 兼容存储服务浏览器，为用户提供了优雅而强大的文件管理体验。它不仅支持基本的文件操作，还提供了专业的视频管理和播放功能，让文件管理变得轻松愉悦。
 
-## 功能特点 ✨
+## ✨ 核心特性
 
-- 🏠 美观的首页设计，带有渐变背景和现代UI元素
-- 🎨 顶部导航栏，提供便捷的页面切换
-- 🌓 内置暗色/亮色模式切换功能
-- 🗂️ 文件和目录浏览
-- 🎬 视频文件在线播放
-- 🖼️ 视频缩略图预览
-- 📊 显示文件元数据（大小、修改日期、观看次数、时长）
-- 🔄 浏览历史记录（前进/后退导航）
-- 🍞 面包屑导航
-- 🔍 与 MongoDB 集成获取视频元数据
-- 🚀 优化的API请求缓存机制
+### 🎯 通用功能
+- 💫 优雅的用户界面，支持亮暗主题切换
+- 🚀 快速的文件浏览和预览
+- 📱 完美的移动端适配
+- 🔍 强大的搜索功能（支持模糊搜索、后缀搜索）
+- 🌐 PWA 支持，可安装为本地应用
 
-## 技术栈 🛠️
+### 📁 文件管理
+- 📂 直观的文件目录浏览
+- 📊 详细的文件信息显示
+- 🔄 文件操作历史记录
+- 🍞 智能的面包屑导航
+- 📈 文件使用统计
 
-- **前端框架**: Next.js
-- **S3 客户端**: AWS SDK for JavaScript v3
-- **后端**: FastAPI (Python)
-- **数据库**: MongoDB
-- **缓存**: FastAPI Cache
-- **样式**: Tailwind CSS
-- **UI组件**: 自定义组件 + Lucide React图标
-- **部署**: Vercel
+### 🎬 视频功能
+- ▶️ 流畅的视频在线播放
+- 🖼️ 智能视频缩略图
+- 📊 视频元数据展示
+- 🎯 视频播放历史记录
+- 📺 自适应播放器
 
-## 项目结构 📂
+## 🛠️ 技术栈
+
+- **核心框架**: [Next.js 14](https://nextjs.org/)
+- **UI 框架**: [Tailwind CSS](https://tailwindcss.com/)
+- **状态管理**: [React Context](https://react.dev/reference/react/useContext)
+- **数据库**: [MongoDB](https://www.mongodb.com/)
+- **存储服务**: [AWS S3 Compatible Storage](https://aws.amazon.com/s3/)
+- **部署平台**: [Vercel](https://vercel.com/)
+
+## 📂 项目结构
 
 ```
 Light-S4/
-├── .env.example          # 环境变量示例配置
-├── .eslintrc.js          # ESLint 配置
-├── .gitignore            # Git 忽略文件配置
-├── api.py                # FastAPI 后端入口点
-├── LINCENSE              # 许可证文件
-├── Procfile              # 部署配置
-├── README.md             # 项目说明文档
-├── package.json          # NPM 包配置
-├── requirements.txt      # Python 依赖配置
-├── vercel.json           # Vercel 部署配置
-├── file-manager.tsx      # 文件管理器组件
-├── app/                  # Next.js 应用目录
-│   ├── layout.tsx        # 全局布局组件
-│   ├── page.tsx          # 首页组件
-│   ├── globals.css       # 全局样式
-│   ├── file-manager/     # 文件管理器页面
-│   └── video-station/    # 视频站页面
-├── components/           # 共享组件
-│   └── Header.tsx        # 顶部导航栏组件
-└── screenshots/          # 截图目录
-    └── demo.png          # 演示截图
+├── app/                      # Next.js 应用目录
+│   ├── layout.tsx           # 全局布局
+│   ├── page.tsx            # 首页
+│   ├── globals.css         # 全局样式
+│   ├── s3-manager/        # S3 管理器
+│   │   ├── components/    # 管理器组件
+│   │   │   ├── FileManager.tsx    # 文件管理器组件
+│   │   │   └── FileList.tsx       # 文件列表组件
+│   │   └── page.tsx       # 管理器页面
+│   └── video-station/     # 视频站
+│       ├── components/    # 视频站组件
+│       │   ├── VideoPlayer.tsx    # 视频播放器
+│       │   └── VideoList.tsx      # 视频列表
+│       └── page.tsx       # 视频站页面
+├── components/             # 共享组件
+│   ├── ui/               # UI 组件
+│   │   ├── button.tsx   # 按钮组件
+│   │   └── sidebar.tsx  # 侧边栏组件
+│   └── shared/          # 通用组件
+├── hooks/                 # 自定义 Hooks
+│   ├── use-s3.ts        # S3 操作 Hook
+│   └── use-theme.ts     # 主题切换 Hook
+├── lib/                   # 工具函数
+│   ├── s3-client.ts     # S3 客户端
+│   └── utils.ts         # 通用工具函数
+├── public/               # 静态资源
+│   ├── icons/           # 应用图标
+│   ├── manifest.json    # PWA 配置
+│   └── service-worker.js # Service Worker
+├── styles/               # 样式文件
+│   └── globals.css      # 全局样式
+├── config/              # 配置文件
+│   └── site.ts         # 站点配置
+├── .env.local          # 环境变量
+├── .eslintrc.json      # ESLint 配置
+├── next.config.mjs     # Next.js 配置
+├── package.json        # 项目依赖
+├── postcss.config.js   # PostCSS 配置
+├── tailwind.config.ts  # Tailwind 配置
+├── tsconfig.json       # TypeScript 配置
+└── vercel.json         # Vercel 部署配置
 ```
 
-## 环境变量 🔐
+## 🚀 快速开始
 
-项目使用以下环境变量进行配置（参考 `.env.example`）：
+### 部署到 Vercel
 
-| 变量名                      | 描述           | 示例值                               |
-|--------------------------|--------------|-----------------------------------|
-| NEXT_PUBLIC_S3_ENDPOINT      | S3 服务端点      | https://s3.bitiful.net            |
-| NEXT_PUBLIC_S3_REGION        | S3 区域        | cn-east-1                         |
-| NEXT_PUBLIC_S3_ACCESS_KEY    | S3 访问密钥      | CYVLn8lssikCoSjACGCpqiO3gOg       |
-| NEXT_PUBLIC_S3_SECRET_KEY    | S3 秘密密钥      | gEKcmCVe12aVnb5jZ10MfBh3GcYXKHMWQ |
-| NEXT_PUBLIC_S3_BUCKET        | S3 存储桶名称     | viper3                            |
-| NEXT_PUBLIC_S3_DOMAIN        | S3 初始访问域名    | viper3.s3.bitiful.net             |
-| NEXT_PUBLIC_S3_CUSTOM_DOMAIN | S3自定义域名      | bitiful.viper3.top                |
-| NEXT_PUBLIC_IMG_CDN          | 图床CDN        | https://cdn.jsdelivr.net/gh       |
-| NEXT_PUBLIC_GH_OWNER         | Github用户名    | Viper373                          |
-| NEXT_PUBLIC_GH_REPO          | 图床Github仓库名称 | picx-images-hosting               |
-| MONGODB_URI      | MongoDB连接URI | mongodb://localhost:27017/        |
-| DB_NAME          | 数据库名称        | XOVideos                          |
-| COL_NAME         | 集合名称         | pornhub                           |
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FViper373%2FLightS4&env=NEXT_PUBLIC_S3_ENDPOINT,NEXT_PUBLIC_S3_REGION,NEXT_PUBLIC_S3_ACCESS_KEY,NEXT_PUBLIC_S3_SECRET_KEY,NEXT_PUBLIC_S3_BUCKET,NEXT_PUBLIC_IMG_CDN,NEXT_PUBLIC_GH_OWNER,NEXT_PUBLIC_GH_REPO,NEXT_PUBLIC_MONGODB_URI,NEXT_PUBLIC_DB_NAME,NEXT_PUBLIC_COL_NAME&project-name=LightS4&repository-name=LightS4)
 
-## Vercel部署 🚀
+### 环境要求
+- **Node.js** 20.0 或更高版本
+- **MongoDB** 4.4 或更高版本
+- **S3** 兼容的存储服务
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Viper373/Light-S4)
+### 本地开发
 
-点击上方的"Deploy with Vercel"按钮，可以一键将项目部署到Vercel平台。
-部署后，您可以通过以下路径访问不同的服务：
-
-- **前端应用**: `https://your-vercel-domain.vercel.app/`
-- **API服务**: `https://your-vercel-domain.vercel.app/api/`
-
-在Vercel部署时，需要配置以下环境变量：
-
-1. 在Vercel项目设置中，找到"Environment Variables"部分
-2. 添加所有必要的环境变量（参考上面的环境变量表）
-3. 确保敏感信息（如S3密钥和MongoDB URI）已正确设置
-
-## 本地开发环境部署 🚀
-
-### 前端部署
-
+1. 克隆仓库
 ```bash
-# 克隆仓库
-git clone https://github.com/Viper373/Light-S4.git
-cd Light-S4
+git clone https://github.com/Viper373/LightS4.git
+cd LightS4
+```
 
-# 创建并配置环境变量
-# 在本地创建 `.env.local` 文件，并添加必要的环境变量（参考上面的环境变量表）
-
-# 安装依赖并启动前端服务
+2. 安装依赖
+```bash
 npm install
+```
+3. 配置环境变量
+```bash
+cp .env.example .env.local
+# 编辑 .env.local 文件，填入必要的配置信息
+```
+
+4. 启动开发服务器
+```bash
 npm run dev
 ```
 
-### 后端部署
+### 生产部署
 
+1. 构建应用
 ```bash
-# 安装依赖
-pip install -r requirements.txt
-
-# 运行后端服务（端口 8000）
-uvicorn api:app --reload --port 8000
-```
-
-## 私有部署 🚀
-
-### 前端
-
-```bash
-# 安装依赖
-npm install
-
-# 开发模式运行
-npm run dev
-
-# 构建生产版本
 npm run build
+```
 
-# 启动生产服务
+2. 启动生产服务器
+```bash
 npm run start
 ```
 
-### 后端
+## ⚙️ 环境变量
 
-```bash
-# 安装依赖
-pip install -r requirements.txt
+项目使用以下环境变量进行配置（创建 `.env.local` 文件）：
 
-# 运行后端服务（端口 8000）
-uvicorn api:app
-```
+### S3 存储配置
+| 变量名 | 必填 | 描述 | 示例值 |
+|-------|------|------|--------|
+| NEXT_PUBLIC_S3_ENDPOINT | ✅ | S3 服务端点 | https://s3.
+bitiful.net |
+| NEXT_PUBLIC_S3_REGION | ✅ | S3 区域 | cn-east-1 |
+| NEXT_PUBLIC_S3_ACCESS_KEY | ✅ | S3 访问密钥 | YOUR_ACCESS_KEY |
+| NEXT_PUBLIC_S3_SECRET_KEY | ✅ | S3 密钥 | YOUR-SECRET_KEY |
+| NEXT_PUBLIC_S3_BUCKET | ✅ | S3 存储桶名称 | YOUR_BUCKET |
 
-## API 接口说明 📚
+### 缩略图配置
+| 变量名 | 必填 | 描述 | 示例值 |
+|-------|------|------|--------|
+| NEXT_PUBLIC_IMG_CDN | ✅ | 图片 CDN 地址 | https://cdn.example.com |
+| NEXT_PUBLIC_GH_OWNER | ✅ | GitHub 用户名 | your-username |
+| NEXT_PUBLIC_GH_REPO | ✅ | GitHub 仓库名 | your-image-repo |
 
-- **GET /api/xovideos**: 获取视频元数据
-    - 参数: `author` (可选) - 按作者筛选视频
-    - 返回: 包含视频标题、观看次数和时长的 JSON 数据
-  ```json
-  {
-  "status": "success",
-  "data": [
-      {
-        "author": "作者名称",
-        "video_title": "视频标题",
-        "video_views": "观看次数",
-        "duration": "视频时长"
-      }
-    ]
-  }
-  ```
-- **GET /api/health**: 检查后端服务健康状态
-    - 返回: 包含状态信息的 JSON 数据
-  ```json
-  {
-    "status": "healthy"
-  }
-  ```
+### MongoDB 配置
+| 变量名 | 必填 | 描述 | 示例值 |
+|-------|------|------|--------|
+| NEXT_PUBLIC_MONGODB_URI | ✅ | MongoDB 连接 URI | mongodb+srv://username:password@cluster.mongodb.net |
+| NEXT_PUBLIC_DB_NAME | ✅ | 数据库名称 | your_database |
+| NEXT_PUBLIC_COL_NAME | ✅ | 集合名称 | your_collection |
 
-- **GET /api/mongodb-status**: 检查 MongoDB 连接状态
-    - 返回: 包含 MongoDB 连接状态的 JSON 数据
-  ```json
-  {
-    "mongodb_uri": "已设置",
-    "db_name": "已设置",
-    "col_name": "已设置",
-    "connection_status": "已连接",
-    "collection_count": 43,
-    "sample_document": { ... },
-    "metadata_count": 86
-  }
-  ```
+### 应用配置
+| 变量名 | 必填 | 描述 | 示例值 |
+|-------|------|------|--------|
+| NEXT_PUBLIC_APP_URL | ❌ | 应用 URL | https://your-app-name.vercel.app |
+| NODE_ENV | ❌ | 运行环境 | development/production |
 
-## MongoDB 数据结构 🗃️
+## 🔧 配置说明
 
-```json
-  {
-  "作者名称": "作者名称",
-  "作者ID": "作者ID",
-  "作者主页": "作者主页URL",
-  "作者头像": "头像URL",
-  "作者视频列表": [
-    {
-      "视频标题": "视频标题",
-      "视频封面": "封面URL",
-      "视频链接": "视频URL",
-      "下载链接": "下载URL",
-      "视频时长": "时长",
-      "视频观看次数": "观看次数",
-      "下载状态": 0,
-      "封面状态": 0
-    }
-  ],
-  "作者视频数量": 6
+### S3 存储配置
+- 支持所有兼容 S3 协议的存储服务
+- 支持自定义域名
+- 支持自定义 CDN
+
+### MongoDB 配置
+- 支持 MongoDB Atlas
+- 支持自托管 MongoDB
+- 支持数据库副本集
+
+## 📚 API 文档
+
+### 视频 API
+
+#### `GET /api/xovideos`
+
+获取视频列表，支持按作者筛选。
+
+**请求参数：**
+
+```typescript
+{
+  author?: string;        // 可选，作者名称，不传则返回所有作者的视频
 }
 ```
 
-## TODO ✈
+**返回示例：**
 
-- 实现视频搜索功能
-- 实现文件上传功能
-- 添加视频转码功能
-- 优化移动端体验
-- 添加更多自定义主题
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "author": "作者名称",
+      "video_title": "视频标题",
+      "video_views": "1000",
+      "duration": "10:30"
+    }
+  ]
+}
+```
 
-## 贡献指南 👥
+**错误响应：**
 
-1. Fork 仓库
-2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+```json
+{
+  "status": "error",
+  "message": "错误信息"
+}
+```
+
+**说明：**
+- 接口使用缓存，缓存时间为 7200 秒（2小时）
+- 当数据库连接失败时，会返回测试数据
+- 视频数据来源于 MongoDB，包含作者名称、视频标题、观看次数和视频时长
+- 空的作者名称会被替换为"未知作者"
+
+#### `GET /api`
+
+检查 API 服务状态。
+
+**返回示例：**
+
+```json
+{
+  "message": "API 服务正常运行"
+}
+```
+
+## 🎯 开发路线图
+
+### 即将推出
+- [ ] 文件批量操作
+- [ ] 更多自定义主题
+
+### 规划中
+- [ ] 文件分享功能
+- [ ] 协作编辑
+
+## 🤝 贡献指南
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
 3. 提交更改 (`git commit -m 'Add some amazing feature'`)
 4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 创建 Pull Request
+5. 提交 Pull Request
 
-## 许可证 📄
+## 📄 许可证
 
-本项目采用 [MIT 许可证](LINCENSE) 。
+本项目采用 [MIT 许可证](LICENSE)。
 
-## 联系方式 📧
+## 📮 联系方式
 
-2483523414@qq.com
+- 邮箱：2483523414@qq.com
+- Issues：[GitHub Issues](https://github.com/Viper373/Light-S4/issues)
+
+## 🌟 致谢
+
+感谢所有为本项目做出贡献的开发者！
 
 ---
 
-⭐ 如果您觉得这个项目有用，请给它一个star星标！
+如果这个项目对您有帮助，请给它一个 star ⭐️

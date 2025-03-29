@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 
 // MongoDB 连接
-const uri = process.env.MONGODB_URI || "mongodb+srv://Viper3:ShadowZed666@pythonproject.1rxku.mongodb.net/?retryWrites=true&w=majority&appName=PythonProject";
-const dbName = process.env.DB_NAME || "XOVideos";
-const colName = process.env.COL_NAME || "pornhub";
+const uri = process.env.MONGODB_URI;
+const dbName = process.env.DB_NAME;
+const colName = process.env.COL_NAME;
 
 // 为全局变量添加类型定义
 declare global {
@@ -15,6 +15,7 @@ let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
 if (!global._mongoClientPromise) {
+  if (!uri) throw new Error('MONGODB_URI is not defined');
   client = new MongoClient(uri);
   global._mongoClientPromise = client.connect();
 }
@@ -35,6 +36,8 @@ export async function GET(request: NextRequest) {
   try {
     const client = await clientPromise;
     const db = client.db(dbName);
+    // 确保 colName 不为 undefined
+    if (!colName) throw new Error('Collection name is not defined');
     const collection = db.collection(colName);
 
     // 使用正则表达式进行模糊匹配，不区分大小写

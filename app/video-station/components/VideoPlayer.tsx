@@ -22,6 +22,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video }) => {
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.volume = volume;
+      // 确保视频加载后自动播放
+      videoRef.current.play().catch(err => {
+        console.error("视频自动播放失败:", err);
+        // 如果自动播放失败，可能是浏览器策略限制，设置为暂停状态
+        setIsPlaying(false);
+      });
     }
   }, [volume]);
 
@@ -106,11 +112,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video }) => {
       <video
         ref={videoRef}
         src={video.videoUrl}
-        className="w-full h-full"
+        className="w-full h-full object-contain bg-black"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onClick={handlePlayPause}
         autoPlay
+        controls={false}
+        playsInline
+        preload="auto"
+        crossOrigin="anonymous"
       />
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
         <div className="flex items-center gap-2 mb-2">

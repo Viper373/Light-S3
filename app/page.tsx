@@ -1,16 +1,23 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
 export default function Home() {
+  const [year, setYear] = useState("2025");
+
+  useEffect(() => {
+    setYear(new Date().getFullYear().toString());
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950 scrollbar-none">
       <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center min-h-screen">
         <div className="text-center max-w-3xl">
-          <span className="emoji">🌈</span>
-          <h1 className="text-5xl font-bold mb-6 gradient-text">
-            Light-S4·微光小溪
+          <h1 className="text-5xl font-bold mb-6 leading-normal">
+            <span className="emoji inline-block">🌈</span>
+            <span className="gradient-text">Light-S4·微光小溪</span>
           </h1>
           <p className="text-xl text-gray-700 dark:text-gray-300 mb-8">
             基于 Next.js 的 S3 兼容存储服务浏览器，提供直观的界面浏览、查看和管理存储在 S3 兼容存储服务中的文件。
@@ -26,11 +33,6 @@ export default function Home() {
             </div>
             <h3 className="text-xl font-semibold mb-2">视频浏览</h3>
             <p className="text-gray-600 dark:text-gray-400">支持视频在线播放、缩略图预览和元数据展示，提供流畅的观看体验。</p>
-            <div className="mt-4">
-              <Link href="/video-station">
-                <Button variant="outline" className="w-full">进入视频站</Button>
-              </Link>
-            </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
@@ -51,11 +53,6 @@ export default function Home() {
             </div>
             <h3 className="text-xl font-semibold mb-2">S3 文件管理</h3>
             <p className="text-gray-600 dark:text-gray-400">浏览、上传、下载和管理存储在 S3 兼容存储服务中的文件，支持文件预览和元数据展示。</p>
-            <div className="mt-4">
-              <Link href="/s3-manager">
-                <Button variant="outline" className="w-full">进入文件管理</Button>
-              </Link>
-            </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
@@ -70,7 +67,7 @@ export default function Home() {
         </div>
 
         <footer className="mt-16 text-center text-gray-600 dark:text-gray-400">
-          <p>© {new Date().getFullYear()} Light-S4·微光小溪丨@ 小暮笙</p>
+          <p>© {year} Light-S4·微光小溪丨@ 小暮笙</p>
         </footer>
       </div>
     </div>

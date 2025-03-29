@@ -22,6 +22,8 @@ interface VideoGridProps {
 }
 
 const VideoCard = ({ video, onClick }: { video: VideoProps; onClick: () => void }) => {
+  // 确保视频数据存在
+  if (!video) return null;
   return (
     <Card 
       className="overflow-hidden group cursor-pointer rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 dark:border-gray-800 dark:bg-gray-900 transform hover:scale-[1.02]" 
@@ -29,24 +31,25 @@ const VideoCard = ({ video, onClick }: { video: VideoProps; onClick: () => void 
     >
       <div className="relative aspect-video overflow-hidden rounded-t-xl">
         <Image
-          src={video.thumbnailUrl}
+          src={video.thumbnailUrl || '/placeholder.svg'}
           alt={video.title}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105 group-hover:brightness-105"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          unoptimized={true}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-lg flex items-center backdrop-blur-sm">
           <User size={12} className="mr-1 text-blue-400" />
-          {video.author}
+          {video.author || '未知作者'}
         </div>
         <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-lg flex items-center backdrop-blur-sm">
           <Clock size={12} className="mr-1 text-amber-400" />
-          {video.duration}
+          {video.duration || '00:00'}
         </div>
         <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-lg flex items-center backdrop-blur-sm">
           <Play size={12} className="mr-1 text-green-400" />
-          {formatViews(video.views)}
+          {formatViews(video.views || 0)}
         </div>
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full p-3 shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-300">

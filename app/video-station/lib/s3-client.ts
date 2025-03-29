@@ -37,8 +37,16 @@ const extractTitleFromPath = (path: string): string => {
 
 // 生成缩略图URL
 const generateThumbnailUrl = (author: string, title: string): string => {
-  // 修正URL格式为: https://cdn.jsdelivr.net/gh/Viper373/picx-images-hosting/作者名/视频标题.jpg
-  return `${THUMBNAIL_CONFIG.imgCdn}/${THUMBNAIL_CONFIG.ghOwner}/${THUMBNAIL_CONFIG.ghRepo}/${author}/${title}.jpg`;
+  // 检查参数是否有效
+  if (!author || !title) return '/placeholder.svg';
+  
+  try {
+    // 修正URL格式为: https://cdn.jsdelivr.net/gh/Viper373/picx-images-hosting/作者名/视频标题.jpg
+    return `${THUMBNAIL_CONFIG.imgCdn}/${THUMBNAIL_CONFIG.ghOwner}/${THUMBNAIL_CONFIG.ghRepo}/${author}/${title}.jpg`;
+  } catch (error) {
+    console.error('Error generating thumbnail URL:', error);
+    return '/placeholder.svg';
+  }
 };
 
 // 生成视频URL，不使用签名URL，直接使用自定义域名
@@ -51,23 +59,40 @@ const generateVideoUrl = (key: string): string => {
 const directoryCache: Record<string, string[]> = {};
 const videoCache: Record<string, VideoMetadata[]> = {};
 const directoryMetadataCache: Record<string, DirectoryMetadata> = {};
-let directoriesCache: string[] = []; // 修改为 let 而不是 const
+const directoriesCache = new Map<string, string[]>();
 const videosCache: Record<string, VideoMetadata[]> = {};
+const videoLoadingPromises: Record<string, Promise<VideoMetadata[]>> = {};
+
+// 清除目录缓存
+export const clearDirectoriesCache = () => {
+  directoriesCache.clear();
+};
+
+// 清除视频缓存
+export const clearVideoCache = (path?: string) => {
+  if (path) {
+    delete videosCache[path];
+    delete videoLoadingPromises[path];
+  } else {
+    Object.keys(videosCache).forEach(key => delete videosCache[key]);
+    Object.keys(videoLoadingPromises).forEach(key => delete videoLoadingPromises[key]);
+  }
+};
 
 // 获取目录列表
-export const fetchDirectories = async (): Promise<string[]> => {
-  try {
-    // 检查缓存
-    if (directoriesCache.length > 0) {
-      return directoriesCache;
-    }
+export const fetchDirectories = async (path: string = "", forceRefresh: boolean = false): Promise<string[]> => {
+  // 检查缓存
+  if (!forceRefresh && directoriesCache.has(path)) {
+    return directoriesCache.get(path) || [];
+  }
 
+  try {
     // 创建一个集合来存储唯一的目录路径
     const uniqueDirectories = new Set<string>();
     let continuationToken: string | undefined = undefined;
     
     // 使用 XOVideos/ 作为基础前缀
-    const basePrefix = "XOVideos/";
+    const basePrefix = path ? `XOVideos/${path}/` : "XOVideos/";
     
     // 使用分页获取所有对象
     do {
@@ -75,14 +100,16 @@ export const fetchDirectories = async (): Promise<string[]> => {
         Bucket: bucketName,
         Prefix: basePrefix,
         Delimiter: "/",
-        MaxKeys: 10000, // 增加到最大值10000
+        MaxKeys: 10000,
         ContinuationToken: continuationToken
       });
       
       const response = await s3Client.send(command);
       
       // 添加基础目录
-      uniqueDirectories.add("XOVideos");
+      if (!path) {
+        uniqueDirectories.add("XOVideos");
+      }
       
       // 处理公共前缀（目录）
       if (response.CommonPrefixes && response.CommonPrefixes.length > 0) {
@@ -106,10 +133,11 @@ export const fetchDirectories = async (): Promise<string[]> => {
     const directories = Array.from(uniqueDirectories).sort();
     
     // 更新缓存
-    directoriesCache = directories;
+    directoriesCache.set(path, directories);
     
     return directories;
   } catch (error) {
+    console.error("Error fetching directories:", error);
     return [];
   }
 };
@@ -243,91 +271,110 @@ export const fetchDirectoryMetadata = async (directoryPath: string): Promise<Dir
 // 获取视频列表
 export const fetchVideos = async (directoryPath: string = ""): Promise<VideoMetadata[]> => {
   try {
-    // 检查缓存
     const cacheKey = directoryPath || "root";
-    if (videosCache[cacheKey]) {
+
+    // 如果已经有正在进行的请求，直接返回该请求的 Promise
+    if (videoLoadingPromises[cacheKey]) {
+      return await videoLoadingPromises[cacheKey];
+    }
+
+    // 如果有缓存且不为空，直接返回缓存的数据
+    if (videosCache[cacheKey] && videosCache[cacheKey].length > 0) {
       return videosCache[cacheKey];
     }
 
-    // 构建前缀
-    const prefix = directoryPath ? 
-      (directoryPath.endsWith("/") ? directoryPath : `${directoryPath}/`) : 
-      "";
-    
-    const videos: VideoMetadata[] = [];
-    const metadataPromises: Promise<void>[] = [];
-    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
-    let continuationToken: string | undefined = undefined;
-    
-    // 使用分页获取所有对象
-    do {
-      const command: ListObjectsV2Command = new ListObjectsV2Command({
-        Bucket: bucketName,
-        Prefix: prefix,
-        MaxKeys: 10000, // 增加到最大值10000
-        ContinuationToken: continuationToken
-      });
+    // 创建新的加载 Promise
+    const loadingPromise = (async () => {
+      // 构建前缀
+      let prefix = "";
+      if (directoryPath === "XOVideos") {
+        prefix = "XOVideos/";
+      } else if (directoryPath.startsWith("XOVideos/")) {
+        prefix = directoryPath.endsWith('/') ? directoryPath : `${directoryPath}/`;
+      } else if (directoryPath) {
+        prefix = `XOVideos/${directoryPath}/`;
+      }
 
-      const response = await s3Client.send(command);
-      
-      if (response.Contents) {
-        for (const item of response.Contents) {
-          if (!item.Key) continue;
-          
-          // 检查是否为视频文件
-          if (videoExtensions.some(ext => item.Key!.toLowerCase().endsWith(ext))) {
-            const key = item.Key;
-            
-            // 从路径中提取作者和标题
-            const author = extractAuthorFromPath(key);
-            const title = extractTitleFromPath(key);
-            
-            // 创建视频对象
-            const video: VideoMetadata = {
-              id: key,
-              title,
-              author,
-              duration: "加载中...",
-              views: 0,
-              thumbnailUrl: generateThumbnailUrl(author, title),
-              videoUrl: generateVideoUrl(key),
-              lastModified: item.LastModified,
-              size: item.Size
-            };
-            
-            // 添加到视频列表
-            videos.push(video);
-            
-            // 异步获取视频元数据
-            const metadataPromise = fetchVideoMetadata(title, author).then(metadata => {
+      const videos: VideoMetadata[] = [];
+      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+      let continuationToken: string | undefined = undefined;
+
+      try {
+        do {
+          const command: ListObjectsV2Command = new ListObjectsV2Command({
+            Bucket: bucketName,
+            Prefix: prefix,
+            MaxKeys: 10000,
+            ContinuationToken: continuationToken
+          });
+
+          const response = await s3Client.send(command);
+
+          if (response.Contents) {
+            for (const item of response.Contents) {
+              if (!item.Key) continue;
+
+              if (videoExtensions.some(ext => item.Key!.toLowerCase().endsWith(ext))) {
+                const key = item.Key;
+                const author = extractAuthorFromPath(key);
+                const title = extractTitleFromPath(key);
+
+                const video: VideoMetadata = {
+                  id: key,
+                  title,
+                  author,
+                  duration: "加载中...",
+                  views: 0,
+                  thumbnailUrl: generateThumbnailUrl(author, title),
+                  videoUrl: generateVideoUrl(key),
+                  lastModified: item.LastModified,
+                  size: item.Size
+                };
+
+                videos.push(video);
+              }
+            }
+          }
+
+          continuationToken = response.NextContinuationToken;
+        } while (continuationToken);
+
+        // 更新缓存
+        videosCache[cacheKey] = videos;
+
+        // 异步加载视频元数据
+        videos.forEach(video => {
+          fetchVideoMetadata(video.title, video.author)
+            .then(metadata => {
               if (metadata) {
-                // 更新视频对象的元数据
                 video.duration = metadata.duration || "00:00";
                 video.views = metadata.views || 0;
+                // 更新缓存中的视频数据
+                videosCache[cacheKey] = [...videos];
               }
-            }).catch(error => {
-              // 设置默认值
+            })
+            .catch(() => {
               video.duration = "00:00";
               video.views = 0;
             });
-            
-            metadataPromises.push(metadataPromise);
-          }
-        }
+        });
+
+        return videos;
+      } finally {
+        // 确保在完成或出错时都清除 loading promise
+        delete videoLoadingPromises[cacheKey];
       }
-      
-      // 更新令牌以获取下一页
-      continuationToken = response.NextContinuationToken as string | undefined;
-    } while (continuationToken);
-    
-    // 等待所有元数据请求完成
-    await Promise.all(metadataPromises);
-    
-    // 更新缓存
-    videosCache[cacheKey] = videos;
-    
-    return videos;
+    })();
+
+    // 存储加载 Promise
+    videoLoadingPromises[cacheKey] = loadingPromise;
+
+    return await loadingPromise;
   } catch (error) {
+    // 发生错误时清除相关缓存
+    const cacheKey = directoryPath || "root";
+    delete videoLoadingPromises[cacheKey];
+    delete videosCache[cacheKey];
     return [];
   }
 };

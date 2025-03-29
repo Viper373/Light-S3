@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronRight, ChevronDown, Folder } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fetchDirectoryMetadata } from "@/app/video-station/lib/s3-client";
+import { fetchDirectoryMetadata, fetchDirectories, clearDirectoriesCache } from "@/app/video-station/lib/s3-client";
 import { DirectoryMetadata } from "@/app/video-station/lib/types";
 
 interface DirectoryTreeProps {
@@ -98,8 +98,13 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({
 
   // 初始化目录树
   useEffect(() => {
-    setDirectoryTree(buildDirectoryTree(directories));
-  }, [directories]);
+    const initDirectoryTree = async () => {
+      if (directories.length > 0) {
+        setDirectoryTree(buildDirectoryTree(directories));
+      }
+    };
+    initDirectoryTree();
+  }, [directories]);  // 依赖于传入的 directories
 
   // 当目录展开时，加载其子目录的元数据
   useEffect(() => {
@@ -115,13 +120,22 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({
         }
       }
     });
-  }, [expandedDirs, directoryTree, directoryMetadata]);
+  }, [expandedDirs, directoryTree]);  // 移除 directoryMetadata 依赖
 
   const toggleDir = (path: string) => {
     setExpandedDirs((prev) => ({
       ...prev,
       [path]: !prev[path],
     }));
+  };
+
+  const handleDirectoryClick = async (path: string) => {
+    if (path === currentPath) return;  // 如果点击当前路径，直接返回
+    onDirectoryClick(path);
+    const node = findNodeByPath(directoryTree, path);
+    if (node && node.children.length > 0) {
+      toggleDir(path);
+    }
   };
 
   const renderDirectoryNode = (node: DirectoryNode, level = 0) => {
@@ -140,12 +154,7 @@ const DirectoryTree: React.FC<DirectoryTreeProps> = ({
             "my-1 cursor-pointer"
           )}
           style={{ paddingLeft: `${level * 12 + 8}px` }}
-          onClick={() => {
-            onDirectoryClick(node.path);
-            if (node.children.length > 0) {
-              toggleDir(node.path);
-            }
-          }}
+          onClick={() => handleDirectoryClick(node.path)}
         >
           <div className="flex items-center w-full">
             {node.children.length > 0 ? (

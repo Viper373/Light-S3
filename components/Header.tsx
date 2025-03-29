@@ -2,12 +2,35 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { MoonIcon, SunIcon, UserIcon, GithubIcon, BookOpenIcon } from "lucide-react"
+import { MoonIcon, SunIcon, UserIcon, GithubIcon, BookOpenIcon, BellIcon, CheckIcon } from "lucide-react"
 import { useState, useEffect } from "react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+
+interface Notification {
+  id: string;
+  title: string;
+  content: string;
+  time: string;
+  read: boolean;
+}
 
 export default function Header() {
   const pathname = usePathname()
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [hasNotifications, setHasNotifications] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
 
   // 检测并设置暗色模式
   useEffect(() => {
@@ -24,6 +47,33 @@ export default function Header() {
     } else {
       document.documentElement.classList.remove("dark")
     }
+
+    // 模拟通知数据
+    const mockNotifications: Notification[] = [
+      {
+        id: '1',
+        title: '系统通知',
+        content: '欢迎使用 Light-S4·微光小溪',
+        time: '刚刚',
+        read: false
+      },
+      {
+        id: '2',
+        title: '更新提醒',
+        content: '系统已更新到最新版本',
+        time: '10分钟前',
+        read: false
+      },
+      {
+        id: '3',
+        title: '文件上传完成',
+        content: '您的文件已成功上传到云端',
+        time: '30分钟前',
+        read: false
+      }
+    ]
+    setNotifications(mockNotifications)
+    setHasNotifications(true)
   }, [])
 
   // 切换暗色模式
@@ -40,13 +90,22 @@ export default function Header() {
     }
   }
 
+  // 标记所有通知为已读
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(notification => ({
+      ...notification,
+      read: true
+    })))
+    setHasNotifications(false)
+  }
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-background dark:bg-gray-950/80 backdrop-blur-sm">
       <div className="container max-w-screen-2xl mx-auto px-4 flex h-16 items-center">
-        <div className="flex-shrink-0 w-1/4 -ml-20">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl font-bold emoji">🌈</span>
-            <span className="text-2xl font-bold gradient-text">Light-S4·微光小溪</span>
+        <div className="flex-shrink-0 w-auto pl-0">
+          <Link href="/" className="flex items-center gap-1 whitespace-nowrap">
+            <span className="text-2xl font-bold emoji inline-block">🌈</span>
+            <span className="text-2xl font-bold gradient-text leading-normal whitespace-nowrap">Light-S4·微光小溪</span>
           </Link>
         </div>
 
@@ -71,46 +130,128 @@ export default function Header() {
           >
             在线视频站
           </Link>
+          <Link
+            href="/s3-manager"
+            className={`text-lg font-medium transition-colors ${pathname.startsWith("/s3-manager")
+              ? "text-blue-600 dark:text-blue-400"
+              : "text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+              }`}
+          >
+            文件管理
+          </Link>
         </nav>
 
-        <div className="flex items-center gap-4 justify-end flex-shrink-0 w-1/6">
-          <a
-            href="https://github.com/Viper373/LightS4"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-            aria-label="GitHub 仓库"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-            </svg>
-          </a>
-          <a
-            href="https://blog.viper3.top"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-            aria-label="博客"
-          >
-            <BookOpenIcon className="h-5 w-5" />
-          </a>
-          <button
-            onClick={toggleDarkMode}
-            className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-            aria-label={isDarkMode ? "切换到亮色模式" : "切换到暗色模式"}
-          >
-            {isDarkMode ? (
-              <SunIcon className="h-5 w-5" />
-            ) : (
-              <MoonIcon className="h-5 w-5" />
-            )}
-          </button>
-          <button
-            className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-            aria-label="用户登录"
-          >
-            <UserIcon className="h-5 w-5" />
-          </button>
+        <div className="flex items-center gap-3 justify-end flex-shrink-0 ml-auto">
+          <TooltipProvider>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="relative rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-label="通知"
+                >
+                  <BellIcon className="h-5 w-5" />
+                  {hasNotifications && (
+                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="font-semibold">通知</h3>
+                </div>
+                <ScrollArea className="h-[300px]">
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`p-4 border-b border-gray-200 dark:border-gray-700 ${
+                        notification.read ? 'opacity-60' : ''
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-medium">{notification.title}</h4>
+                        <span className="text-xs text-gray-500">{notification.time}</span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {notification.content}
+                      </p>
+                    </div>
+                  ))}
+                </ScrollArea>
+                <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={markAllAsRead}
+                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    <CheckIcon className="h-4 w-4 mr-1" />
+                    全部已读
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href="https://github.com/Viper373/LightS4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-label="GitHub 仓库"
+                >
+                  <GithubIcon className="h-5 w-5" />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>GitHub 仓库</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href="https://blog.viper3.top"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-label="博客"
+                >
+                  <BookOpenIcon className="h-5 w-5" />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>博客</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggleDarkMode}
+                  className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-label={isDarkMode ? "切换到亮色模式" : "切换到暗色模式"}
+                >
+                  {isDarkMode ? (
+                    <SunIcon className="h-5 w-5" />
+                  ) : (
+                    <MoonIcon className="h-5 w-5" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isDarkMode ? "切换到亮色模式" : "切换到暗色模式"}
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="rounded-full p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-label="用户登录"
+                >
+                  <UserIcon className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>用户登录</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </header>

@@ -1,6 +1,6 @@
 {
   "name": "light-s4",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,7 +12,6 @@
     "@aws-sdk/client-s3": "^3.772.0",
     "@aws-sdk/s3-request-presigner": "^3.772.0",
     "@hookform/resolvers": "^3.9.1",
-    "@next/font": "^14.2.15",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.4",
     "@radix-ui/react-aspect-ratio": "^1.1.1",
@@ -70,6 +69,8 @@
     "@types/node": "^22",
     "@types/react": "18.2.0",
     "@types/react-dom": "18.2.0",
+    "eslint": "9.23.0",
+    "eslint-config-next": "15.2.4",
     "postcss": "^8",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
