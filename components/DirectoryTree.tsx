@@ -3,23 +3,30 @@
 import { useState, useEffect } from "react"
 import { ChevronRight, ChevronDown, Folder, FolderOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams, ReadonlyURLSearchParams } from "next/navigation"
 
 interface DirectoryTreeProps {
   directories: string[]
   onDirectoryClick: (path: string) => void
   currentPath: string
+  initialSearchParams?: ReadonlyURLSearchParams | null
 }
 
-export default function DirectoryTree({ directories, onDirectoryClick, currentPath }: DirectoryTreeProps) {
+export default function DirectoryTree({ 
+  directories, 
+  onDirectoryClick, 
+  currentPath,
+  initialSearchParams 
+}: DirectoryTreeProps) {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const params = initialSearchParams || searchParams
 
   // 从 URL 恢复目录状态
   useEffect(() => {
-    const path = searchParams.get("path") || ""
+    const path = params ? params.get("path") || "" : ""
     if (path) {
       // 展开所有父目录
       const pathParts = path.split("/")
@@ -33,7 +40,7 @@ export default function DirectoryTree({ directories, onDirectoryClick, currentPa
       })
       setExpandedDirs(expandedPaths)
     }
-  }, [searchParams])
+  }, [params])
 
   const toggleDirectory = (path: string) => {
     const newExpandedDirs = new Set(expandedDirs)
@@ -48,9 +55,11 @@ export default function DirectoryTree({ directories, onDirectoryClick, currentPa
   const handleDirectoryClick = (path: string) => {
     onDirectoryClick(path)
     // 更新 URL
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("path", path)
-    router.push(`${pathname}?${params.toString()}`)
+    if (params) {
+      const newParams = new URLSearchParams(params.toString())
+      newParams.set("path", path)
+      router.push(`${pathname}?${newParams.toString()}`)
+    }
   }
 
   const renderDirectory = (path: string, level: number = 0) => {

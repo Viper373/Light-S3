@@ -155,34 +155,39 @@ export default function Header() {
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-0">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="font-semibold">通知</h3>
-                </div>
-                <ScrollArea className="h-[300px]">
-                  {notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`p-4 border-b border-gray-200 dark:border-gray-700 ${
-                        notification.read ? 'opacity-60' : ''
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-medium">{notification.title}</h4>
-                        <span className="text-xs text-gray-500">{notification.time}</span>
+              <PopoverContent 
+                className="w-80 p-0 border dark:border-gray-700 dark:bg-gray-900">
+                <div className="max-h-[300px] overflow-auto scrollbar-none">
+                  <div className="p-4 border-b dark:border-gray-700">
+                    <h3 className="font-medium">通知</h3>
+                  </div>
+                  
+                  <div className="divide-y dark:divide-gray-700">
+                    {notifications.map((notification, index) => (
+                      <div 
+                        key={index} 
+                        className={`p-4 hover:bg-accent ${notification.read ? 'opacity-60' : ''}`}
+                      >
+                        <div className="font-medium mb-1">{notification.title}</div>
+                        <p className="text-sm text-muted-foreground">{notification.content}</p>
+                        <div className="text-xs text-gray-500 mt-2">{notification.time}</div>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {notification.content}
-                      </p>
-                    </div>
-                  ))}
-                </ScrollArea>
-                <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                    ))}
+                    
+                    {notifications.length === 0 && (
+                      <div className="p-4 text-center text-muted-foreground">
+                        暂无通知
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="p-2 border-t dark:border-gray-700 flex justify-end">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-blue-500"
                     onClick={markAllAsRead}
-                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     <CheckIcon className="h-4 w-4 mr-1" />
                     全部已读

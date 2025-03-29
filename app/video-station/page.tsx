@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VideoGrid from "@/app/video-station/components/VideoGrid";
@@ -15,7 +15,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Sidebar } from "@/components/ui/sidebar";
 import { useSearchParams } from "next/navigation";
 
-export default function VideoStation() {
+// 创建一个客户端组件来使用 useSearchParams
+function VideoContent() {
   const [directories, setDirectories] = useState<string[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
   const [videos, setVideos] = useState<VideoMetadata[]>([]);
@@ -31,18 +32,17 @@ export default function VideoStation() {
   const searchHistoryRef = useRef<Set<string>>(new Set());
   
   const containerRef = useRef<HTMLDivElement>(null);
-
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams();
 
   // 从 URL 恢复目录状态
   useEffect(() => {
-    const currentPath = searchParams.get("path") || ""
-    if (currentPath) {
-      setCurrentPath(currentPath)
+    const path = searchParams.get("path") || "";
+    if (path) {
+      setCurrentPath(path);
     }
-  }, [searchParams])
+  }, [searchParams]);
 
   // 初始化加载
   useEffect(() => {
@@ -301,6 +301,7 @@ export default function VideoStation() {
             directories={directories}
             onDirectoryClick={handleDirectorySelect}
             currentPath={currentPath}
+            initialSearchParams={searchParams}
           />
         </ScrollArea>
       </Sidebar>
@@ -378,5 +379,14 @@ export default function VideoStation() {
         </div>
       )}
     </div>
+  );
+}
+
+// 主页面组件
+export default function VideoStation() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">加载中...</div>}>
+      <VideoContent />
+    </Suspense>
   );
 }
