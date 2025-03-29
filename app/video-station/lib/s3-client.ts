@@ -4,11 +4,11 @@ import { VideoMetadata, DirectoryMetadata } from "./types";
 
 // S3 客户端配置
 const s3Client = new S3Client({
-  region: S3_CONFIG.region,
+  region: S3_CONFIG.region as string,
   endpoint: S3_CONFIG.endpoint,
   credentials: {
-    accessKeyId: S3_CONFIG.accessKeyId,
-    secretAccessKey: S3_CONFIG.secretAccessKey,
+    accessKeyId: S3_CONFIG.accessKeyId as string,
+    secretAccessKey: S3_CONFIG.secretAccessKey as string,
   },
   forcePathStyle: true, // 对于某些S3兼容服务，需要使用路径样式URL
 });
@@ -274,7 +274,7 @@ export const fetchVideos = async (directoryPath: string = ""): Promise<VideoMeta
     const cacheKey = directoryPath || "root";
 
     // 如果已经有正在进行的请求，直接返回该请求的 Promise
-    if (videoLoadingPromises[cacheKey]) {
+    if (cacheKey in videoLoadingPromises) {
       return await videoLoadingPromises[cacheKey];
     }
 
